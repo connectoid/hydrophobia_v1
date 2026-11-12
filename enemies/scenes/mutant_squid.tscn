@@ -1,0 +1,32 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" uid="uid://5m6ovfhqx0nn" path="res://enemies/enemy.gd" id="1_script"]
+[ext_resource type="SpriteFrames" path="res://enemies/creatures/mutant_squid/mutant_squid_frames.tres" id="2_frames"]
+[ext_resource type="Script" path="res://enemies/health_bar.gd" id="3_health_bar"]
+[ext_resource type="PackedScene" path="res://pickups/xp_orb.tscn" id="4_xp_orb"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_mutant_squid"]
+radius = 28.0
+
+[node name="MutantSquid" type="CharacterBody2D"]
+script = ExtResource("1_script")
+max_health = 65.0
+speed = 130.0
+contact_damage = 12.0
+attack_interval = 0.9
+xp_orb_scene = ExtResource("4_xp_orb")
+face_target = true
+sprite_default_facing = 0.0
+
+[node name="Sprite2D" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.55, 0.55)
+sprite_frames = ExtResource("2_frames")
+animation = &"swim"
+autoplay = "swim"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_mutant_squid")
+
+[node name="HealthBar" type="Node2D" parent="."]
+position = Vector2(0, -38)
+script = ExtResource("3_health_bar")

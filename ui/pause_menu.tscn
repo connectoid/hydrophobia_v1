@@ -1,0 +1,174 @@
+[gd_scene load_steps=3 format=3 uid="uid://bqxma112pdf7f"]
+
+[ext_resource type="Script" path="res://ui/pause_menu.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/balance_menu.tscn" id="2_balance_menu"]
+
+[node name="PauseMenu" type="CanvasLayer"]
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.6)
+
+[node name="MainPanel" type="VBoxContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -140.0
+offset_right = 120.0
+offset_bottom = 140.0
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="MainPanel"]
+theme_override_font_sizes/font_size = 32
+horizontal_alignment = 1
+text = "ПАУЗА"
+
+[node name="WaveLabel" type="Label" parent="MainPanel"]
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+text = "Волна 1"
+
+[node name="ResumeButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Продолжить"
+
+[node name="ControlsButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Управление"
+
+[node name="DebugButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Отладка"
+
+[node name="BalanceButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Баланс"
+
+[node name="SoundButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Звук: Вкл"
+
+[node name="QuitButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Выход"
+
+[node name="ControlsPanel" type="VBoxContainer" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -140.0
+offset_right = 150.0
+offset_bottom = 140.0
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "УПРАВЛЕНИЕ"
+
+[node name="MouseButton" type="Button" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Мышь"
+
+[node name="KeyboardButton" type="Button" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Клавиатура"
+
+[node name="BothButton" type="Button" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Мышь + клавиатура"
+
+[node name="BackButton" type="Button" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Назад"
+
+[node name="DebugPanel" type="VBoxContainer" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -290.0
+offset_right = 150.0
+offset_bottom = 290.0
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "ОТЛАДКА"
+
+[node name="FreezeEnemiesButton" type="Button" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Остановить всех врагов"
+
+[node name="GodModeButton" type="Button" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Режим Бога: Выкл"
+
+[node name="ShowAttackRangeButton" type="Button" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Attack Range: Вкл"
+
+[node name="EnemyDensityLabel" type="Label" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+text = "Количество врагов: Как сейчас (10/10)"
+
+[node name="EnemyDensitySlider" type="HSlider" parent="DebugPanel"]
+min_value = 1.0
+max_value = 10.0
+step = 1.0
+value = 10.0
+
+[node name="BackButton" type="Button" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Назад"
+
+[node name="GameOverPanel" type="VBoxContainer" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -130.0
+offset_right = 180.0
+offset_bottom = 130.0
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="GameOverPanel"]
+theme_override_font_sizes/font_size = 32
+horizontal_alignment = 1
+text = "ИГРА ОКОНЧЕНА"
+
+[node name="RestartButton" type="Button" parent="GameOverPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Начать заново"
+
+[node name="MainMenuButton" type="Button" parent="GameOverPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Главное меню"
+
+[node name="QuitButton" type="Button" parent="GameOverPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Выход"
+
+[node name="BalanceMenu" parent="." instance=ExtResource("2_balance_menu")]

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=4 format=3 uid="uid://c8lm3b6h1w4vq"]
+
+[ext_resource type="Script" uid="uid://ch5gc5li8s2at" path="res://weapons/weapon_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://player/projectile.tscn" id="2_projectile"]
+[ext_resource type="AudioStream" uid="uid://cj3oc1iotawn0" path="res://assets/sounds/rifle.mp3" id="3_sound"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "Автомат"
+type = 1
+attack_interval = 0.25
+cost = 100
+projectile_scene = ExtResource("2_projectile")
+attack_range = 300.0
+fire_sound = ExtResource("3_sound")

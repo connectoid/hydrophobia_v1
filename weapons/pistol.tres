@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=4 format=3 uid="uid://c3aq0f2v7katp"]
+
+[ext_resource type="Script" uid="uid://ch5gc5li8s2at" path="res://weapons/weapon_data.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://dh6t2lap4w1v7" path="res://player/projectile_pistol.tscn" id="2_projectile"]
+[ext_resource type="AudioStream" uid="uid://colpq4gvuk1sy" path="res://assets/sounds/gun.mp3" id="3_sound"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "Пистолет"
+type = 1
+damage = 18.0
+cost = 50
+projectile_scene = ExtResource("2_projectile")
+attack_range = 200.0
+fire_sound = ExtResource("3_sound")

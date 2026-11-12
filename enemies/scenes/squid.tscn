@@ -1,0 +1,35 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" uid="uid://5m6ovfhqx0nn" path="res://enemies/enemy.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/sprites/squid_new.png" id="2_texture"]
+[ext_resource type="Script" path="res://enemies/health_bar.gd" id="3_health_bar"]
+[ext_resource type="PackedScene" path="res://pickups/xp_orb.tscn" id="4_xp_orb"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_squid"]
+radius = 32.0
+
+[node name="Squid" type="CharacterBody2D"]
+script = ExtResource("1_script")
+max_health = 70.0
+speed = 90.0
+xp_reward = 12
+xp_orb_scene = ExtResource("4_xp_orb")
+lunge_enabled = true
+lunge_range = 160.0
+lunge_speed = 900.0
+lunge_damage = 35.0
+lunge_duration = 0.35
+lunge_cooldown = 3.0
+face_target = true
+sprite_default_facing = 0.0
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_texture")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_squid")
+
+[node name="HealthBar" type="Node2D" parent="."]
+position = Vector2(0, -48)
+script = ExtResource("3_health_bar")

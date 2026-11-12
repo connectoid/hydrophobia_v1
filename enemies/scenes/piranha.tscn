@@ -1,0 +1,41 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" uid="uid://5m6ovfhqx0nn" path="res://enemies/enemy.gd" id="1_script"]
+[ext_resource type="SpriteFrames" path="res://enemies/fish/piranha/piranha_frames.tres" id="2_frames"]
+[ext_resource type="Script" path="res://enemies/health_bar.gd" id="3_health_bar"]
+[ext_resource type="PackedScene" path="res://pickups/xp_orb.tscn" id="4_xp_orb"]
+[ext_resource type="PackedScene" path="res://enemies/bubble_trail.tscn" id="5_bubble_trail"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_piranha"]
+radius = 35.0
+
+[node name="Piranha" type="CharacterBody2D"]
+script = ExtResource("1_script")
+max_health = 28.0
+speed = 150.0
+xp_orb_scene = ExtResource("4_xp_orb")
+lunge_enabled = true
+lunge_range = 70.0
+lunge_speed = 500.0
+lunge_damage = 8.0
+lunge_duration = 0.2
+lunge_cooldown = 1.8
+face_target = true
+sprite_default_facing = 0.0
+
+[node name="Sprite2D" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.75, 0.75)
+sprite_frames = ExtResource("2_frames")
+animation = &"swim"
+autoplay = "swim"
+
+[node name="BubbleTrail" parent="Sprite2D" instance=ExtResource("5_bubble_trail")]
+position = Vector2(-40, 0)
+modulate = Color(1, 0.6, 0.6, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_piranha")
+
+[node name="HealthBar" type="Node2D" parent="."]
+position = Vector2(0, -49)
+script = ExtResource("3_health_bar")

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=3 format=3 uid="uid://bcoufhbnylpnp"]
+
+[ext_resource type="Script" uid="uid://ch5gc5li8s2at" path="res://weapons/weapon_data.gd" id="1_script"]
+[ext_resource type="AudioStream" uid="uid://gmbom61485ww" path="res://assets/sounds/knife.mp3" id="2_sound"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "Сабля"
+damage = 35.0
+attack_interval = 0.45
+cost = 150
+attack_range = 130.0
+fire_sound = ExtResource("2_sound")

@@ -1,0 +1,80 @@
+[gd_scene load_steps=23 format=3 uid="uid://dve8xw70apj2p"]
+
+[ext_resource type="PackedScene" uid="uid://c1u8s2v3w4x5y" path="res://player/player.tscn" id="1_player"]
+[ext_resource type="Script" uid="uid://dcs5s0tjynar6" path="res://world/level.gd" id="3_level"]
+[ext_resource type="Script" uid="uid://dq3v1avhr3u2f" path="res://enemies/enemy_spawner.gd" id="4_spawner"]
+[ext_resource type="Script" uid="uid://cnv48f3054h5f" path="res://world/depth_background.gd" id="6_depth_bg"]
+[ext_resource type="Script" uid="uid://ch5gc5li8s2at" path="res://weapons/weapon_data.gd" id="7_k73cj"]
+[ext_resource type="Script" path="res://enemies/enemy_data.gd" id="7_x0ka3"]
+[ext_resource type="PackedScene" uid="uid://mdc10s1ewpa1" path="res://ui/hud.tscn" id="8_hud"]
+[ext_resource type="Script" uid="uid://cppqibhacoc5h" path="res://world/chest_spawner.gd" id="9_chest_spawner"]
+[ext_resource type="PackedScene" uid="uid://b3x7rak2m5r8n" path="res://world/chest.tscn" id="10_chest"]
+[ext_resource type="Script" path="res://world/seaweed_spawner.gd" id="23_seaweed_spawner"]
+[ext_resource type="PackedScene" path="res://world/seaweed.tscn" id="24_seaweed"]
+[ext_resource type="Script" path="res://world/research_module_spawner.gd" id="25_research_module_spawner"]
+[ext_resource type="PackedScene" path="res://world/research_module.tscn" id="26_research_module"]
+[ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="12_pause_menu"]
+[ext_resource type="Resource" path="res://enemies/data/piranha.tres" id="13_piranha"]
+[ext_resource type="Resource" uid="uid://iffhq88pj8v6" path="res://enemies/data/shark.tres" id="14_shark"]
+[ext_resource type="Resource" uid="uid://iffiebeiedx4" path="res://enemies/data/oxygen_fish.tres" id="15_oxygen_fish"]
+[ext_resource type="PackedScene" path="res://ui/weapon_shop.tscn" id="16_weapon_shop"]
+[ext_resource type="Resource" uid="uid://co01g4t8h2m5r" path="res://weapons/knife.tres" id="17_knife"]
+[ext_resource type="Resource" uid="uid://c3aq0f2v7katp" path="res://weapons/pistol.tres" id="18_pistol"]
+[ext_resource type="Resource" uid="uid://c8lm3b6h1w4vq" path="res://weapons/rifle.tres" id="19_rifle"]
+[ext_resource type="Resource" path="res://weapons/saber.tres" id="20_saber"]
+[ext_resource type="Resource" path="res://weapons/torpedo.tres" id="21_torpedo"]
+[ext_resource type="Resource" path="res://enemies/data/angler.tres" id="22_angler"]
+[ext_resource type="Resource" path="res://enemies/data/mutant_squid.tres" id="27_mutant_squid"]
+[ext_resource type="Resource" path="res://enemies/data/eel.tres" id="28_eel"]
+[ext_resource type="Resource" path="res://enemies/data/puffermine.tres" id="29_puffermine"]
+[ext_resource type="Script" path="res://world/parallax_background.gd" id="30_parallax_bg"]
+[ext_resource type="Script" path="res://world/lighting.gd" id="31_lighting"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("3_level")
+
+[node name="DepthBackground" type="Node2D" parent="."]
+z_index = -10
+script = ExtResource("6_depth_bg")
+
+[node name="ParallaxBackground" type="Node2D" parent="."]
+script = ExtResource("30_parallax_bg")
+
+[node name="Lighting" type="CanvasLayer" parent="."]
+script = ExtResource("31_lighting")
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+
+[node name="HUD" parent="." instance=ExtResource("8_hud")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("12_pause_menu")]
+
+[node name="WeaponShop" parent="." instance=ExtResource("16_weapon_shop")]
+weapon_pool = Array[ExtResource("7_k73cj")]([ExtResource("17_knife"), ExtResource("18_pistol"), ExtResource("19_rifle"), ExtResource("20_saber"), ExtResource("21_torpedo")])
+
+[node name="EnemySpawner" type="Node2D" parent="."]
+script = ExtResource("4_spawner")
+enemy_pool = Array[ExtResource("7_x0ka3")]([ExtResource("13_piranha"), ExtResource("14_shark"), ExtResource("15_oxygen_fish"), ExtResource("22_angler"), ExtResource("27_mutant_squid"), ExtResource("28_eel"), ExtResource("29_puffermine")])
+
+[node name="AmbientTimer" type="Timer" parent="EnemySpawner"]
+
+[node name="ChestSpawner" type="Node2D" parent="."]
+script = ExtResource("9_chest_spawner")
+chest_scene = ExtResource("10_chest")
+
+[node name="SpawnTimer" type="Timer" parent="ChestSpawner"]
+wait_time = 10.0
+
+[node name="SeaweedSpawner" type="Node2D" parent="."]
+script = ExtResource("23_seaweed_spawner")
+seaweed_scene = ExtResource("24_seaweed")
+
+[node name="SpawnTimer" type="Timer" parent="SeaweedSpawner"]
+wait_time = 2.4
+
+[node name="ResearchModuleSpawner" type="Node2D" parent="."]
+script = ExtResource("25_research_module_spawner")
+research_module_scene = ExtResource("26_research_module")
+
+[node name="SpawnTimer" type="Timer" parent="ResearchModuleSpawner"]
+wait_time = 10.0

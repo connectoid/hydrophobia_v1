@@ -1,0 +1,58 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/weapon_shop.gd" id="1_script"]
+
+[node name="WeaponShop" type="CanvasLayer"]
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.7)
+
+[node name="Panel" type="VBoxContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -380.0
+offset_top = -280.0
+offset_right = 380.0
+offset_bottom = 280.0
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Panel"]
+theme_override_font_sizes/font_size = 32
+horizontal_alignment = 1
+text = "ВОЛНА ПРОЙДЕНА"
+
+[node name="StatusLabel" type="Label" parent="Panel"]
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+text = "XP: 0    Оружие: 1/6"
+
+[node name="OwnedLabel" type="Label" parent="Panel"]
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+text = "Ваше оружие"
+
+[node name="OwnedContainer" type="HBoxContainer" parent="Panel"]
+custom_minimum_size = Vector2(0, 100)
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="CardsContainer" type="HBoxContainer" parent="Panel"]
+custom_minimum_size = Vector2(0, 230)
+alignment = 1
+theme_override_constants/separation = 24
+
+[node name="RerollButton" type="Button" parent="Panel"]
+theme_override_font_sizes/font_size = 18
+text = "Заменить (20 XP)"
+
+[node name="ContinueButton" type="Button" parent="Panel"]
+theme_override_font_sizes/font_size = 22
+text = "Дальше"

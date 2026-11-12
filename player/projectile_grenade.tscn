@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://player/projectile_grenade.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dp5n0ssaryjmr" path="res://icon.svg" id="2_texture"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_projectile_grenade"]
+radius = 10.0
+
+[node name="ProjectileGrenade" type="Area2D"]
+script = ExtResource("1_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color(0.25, 0.55, 0.15, 1)
+scale = Vector2(0.28, 0.28)
+texture = ExtResource("2_texture")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_projectile_grenade")

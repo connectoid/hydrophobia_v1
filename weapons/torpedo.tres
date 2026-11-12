@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=4 format=3]
+
+[ext_resource type="Script" uid="uid://ch5gc5li8s2at" path="res://weapons/weapon_data.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://player/projectile_torpedo.tscn" id="2_projectile"]
+[ext_resource type="AudioStream" uid="uid://gmbom61485ww" path="res://assets/sounds/knife.mp3" id="3_sound"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "Торпеда"
+type = 1
+damage = 28.0
+attack_interval = 2.0
+cost = 120
+projectile_scene = ExtResource("2_projectile")
+attack_range = 220.0
+fire_sound = ExtResource("3_sound")
+splash_radius = 130.0

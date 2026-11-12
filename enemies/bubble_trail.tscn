@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3 uid="uid://c6rk6j4h8r7wf"]
+
+[ext_resource type="Texture2D" path="res://player/bubble_particle.png" id="1_bubble_tex"]
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_fish_bubbles"]
+emission_shape = 1
+emission_sphere_radius = 10.0
+direction = Vector3(-1, 0, 0)
+spread = 65.0
+gravity = Vector3(0, -35, 0)
+initial_velocity_min = 4.0
+initial_velocity_max = 16.0
+scale_min = 0.18
+scale_max = 0.42
+color = Color(0.85, 0.95, 1, 0.6)
+
+[node name="BubbleTrail" type="GPUParticles2D"]
+amount = 16
+lifetime = 1.4
+local_coords = false
+process_material = SubResource("ParticleProcessMaterial_fish_bubbles")
+texture = ExtResource("1_bubble_tex")

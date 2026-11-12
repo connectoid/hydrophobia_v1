@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=3 format=3 uid="uid://iffiebeiedx4"]
+
+[ext_resource type="Script" path="res://enemies/enemy_data.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://tjkok6cni551" path="res://enemies/scenes/oxygen_fish.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_script")
+enemy_name = "Кислородная рыба"
+scene = ExtResource("2_scene")
+spawn_weight = 2.0
+ambient = true

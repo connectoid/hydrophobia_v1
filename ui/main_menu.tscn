@@ -1,0 +1,298 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/main_menu.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/balance_menu.tscn" id="2_balance_menu"]
+
+[node name="MainMenu" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.15, 0.25, 1)
+
+[node name="MainPanel" type="VBoxContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -260.0
+offset_right = 160.0
+offset_bottom = 260.0
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="MainPanel"]
+theme_override_font_sizes/font_size = 44
+horizontal_alignment = 1
+text = "HYDROPHOBIA"
+
+[node name="SubtitleLabel" type="Label" parent="MainPanel"]
+theme_override_colors/font_color = Color(1, 1, 1, 0.5)
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+text = "рабочее название"
+
+[node name="StartButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 24
+text = "Начать игру"
+
+[node name="ControlsButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Управление"
+
+[node name="DebugButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Отладка"
+
+[node name="SoundButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Звук: Выкл"
+
+[node name="HelpButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Помощь"
+
+[node name="DevDiaryButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Дневник разработки"
+
+[node name="BalanceButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Баланс"
+
+[node name="QuitButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Выход"
+
+[node name="ControlsPanel" type="VBoxContainer" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -140.0
+offset_right = 150.0
+offset_bottom = 140.0
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "УПРАВЛЕНИЕ"
+
+[node name="MouseButton" type="Button" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Мышь"
+
+[node name="KeyboardButton" type="Button" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Клавиатура"
+
+[node name="BothButton" type="Button" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Мышь + клавиатура"
+
+[node name="BackButton" type="Button" parent="ControlsPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Назад"
+
+[node name="DebugPanel" type="VBoxContainer" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -290.0
+offset_right = 150.0
+offset_bottom = 290.0
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "ОТЛАДКА"
+
+[node name="FreezeEnemiesButton" type="Button" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Остановить всех врагов"
+
+[node name="GodModeButton" type="Button" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Режим Бога: Выкл"
+
+[node name="ShowAttackRangeButton" type="Button" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Attack Range: Вкл"
+
+[node name="EnemyDensityLabel" type="Label" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+text = "Количество врагов: Как сейчас (10/10)"
+
+[node name="EnemyDensitySlider" type="HSlider" parent="DebugPanel"]
+min_value = 1.0
+max_value = 10.0
+step = 1.0
+value = 10.0
+
+[node name="BackButton" type="Button" parent="DebugPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Назад"
+
+[node name="HelpPanel" type="VBoxContainer" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 40.0
+offset_right = -80.0
+offset_bottom = -40.0
+theme_override_constants/separation = 14
+
+[node name="TitleLabel" type="Label" parent="HelpPanel"]
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "ПОМОЩЬ"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="HelpPanel"]
+custom_minimum_size = Vector2(0, 0)
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="BodyLabel" type="RichTextLabel" parent="HelpPanel/ScrollContainer"]
+custom_minimum_size = Vector2(0, 0)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 17
+theme_override_font_sizes/bold_font_size = 20
+bbcode_enabled = true
+fit_content = true
+text = "[b]ЦЕЛЬ[/b]
+Hydrophobia — рогалик-выживалка про спуск на батискафе в глубину. 10 волн, с каждой всё глубже, темнее и опаснее. Волна пройдена, когда вы нырнули на нужную глубину от точки, где она началась. Пройти все 10 волн — победа; кончился кислород или здоровье — забег окончен.
+
+[b]УПРАВЛЕНИЕ[/b]
+Мышь, клавиатура (WASD/стрелки) или оба сразу — выбирается в разделе «Управление» этого меню. Оружие батискафа бьёт врагов и сундуки в радиусе поражения само, отдельной кнопки атаки нет — только подойти или навестись.
+
+[b]РЕСУРСЫ БАТИСКАФА[/b]
+[b]Кислород[/b] — тратится только пока вы двигаетесь; стоя на месте и отбиваясь, вы его не расходуете. Кончится — смерть. Полностью восполняется в начале каждой волны, а ещё пополняется пузырьками с убитых кислородных рыб и пятнами водорослей (см. ниже).
+[b]Целостность[/b] (HP) — 0 = смерть. Тоже восполняется в начале каждой волны. Лечится аптечками из разбитых сундуков.
+[b]Прочность корпуса[/b] — НЕ восстанавливается между волнами, копится за весь забег целиком. С 2-й волны давление глубины начинает медленно её протачивать (чем дальше забег — тем быстрее), а чем ниже прочность, тем больнее бьют враги, вплоть до двойного урона на нуле. Вернуть её можно только в затонувших исследовательских модулях (см. ниже).
+
+[b]ВОЛНЫ[/b]
+Чем дольше вы топчетесь на одной глубине вместо того, чтобы продвигаться вниз, тем гуще спавнятся враги — фармить бесконечно на месте не получится, и чем ближе к цели волны по глубине, тем плотнее спавн. Между волнами открывается магазин оружия.
+
+[b]ОРУЖИЕ[/b]
+У батискафа 6 слотов под оружие (оружейные пилоны по бортам). Стартуете с ножом, остальное покупается за опыт (XP) в магазине между волнами: 3 случайные карточки, весь набор можно перекатить за XP, а уже купленное — продать обратно за половину цены.
+• [b]Нож[/b] — ближний бой, очень быстрый, слабый удар. Стартовое оружие.
+• [b]Пистолет[/b] — дальний бой, средняя дальность и урон.
+• [b]Автомат[/b] — дальний бой, самая высокая скорострельность.
+• [b]Сабля[/b] — ближний бой, тяжёлый удар.
+• [b]Торпеда[/b] — дальний бой, взрыв задевает всех врагов рядом с целью, а не только одного.
+
+[b]ВРАГИ[/b]
+• [b]Пиранья[/b] — маленькая и быстрая, нападает стаей. Немного отступает, затем резко бросается на игрока и захлопывает челюсти. Самая частая, но слабая.
+• [b]Кислородная рыба[/b] — не атакует и не преследует, просто плавает волнообразно, время от времени меняя курс, иногда почти разворачиваясь на 180°; уткнувшись в поверхность воды, сразу разворачивается вниз. При смерти роняет пузырёк кислорода.
+• [b]Акулёнок[/b] — быстрый, атакует с разгона, появляется с 2-й волны.
+• [b]Спрут-мутант[/b] — средний враг ближнего боя, хлещет щупальцами, появляется с 2-й волны.
+• [b]Электромурена[/b] — быстрая, бьёт электрическим рывком-укусом, появляется с 2-й волны.
+• [b]Удильщик[/b] — появляется с 3-й волны, редкий, тяжёлый и самый живучий (больше всех опыта за убийство); перед укусом разгорается его собственная светящаяся приманка — заметный сигнал опасности издалека.
+• [b]Иглобомба[/b] — появляется с 3-й волны, медлительная и тяжёлая, но взрывается при уничтожении — добивать её стоит на расстоянии, а не вплотную.
+
+[b]СУНДУКИ[/b]
+Появляются вокруг вас сами по себе. Ломаются оружием точно так же, как враги, и роняют аптечку.
+
+[b]ПЯТНА ВОДОРОСЛЕЙ[/b]
+Изредка встречаются в толще воды. Заплыв внутрь, батискаф медленно пополняет кислород, пока остаётся в зоне. Пятно одноразовое: отдав весь запас, растворяется; уплывёте далеко, не выработав его до конца, — тоже исчезнет.
+
+[b]ЗАТОНУВШИЕ ИССЛЕДОВАТЕЛЬСКИЕ МОДУЛИ[/b]
+Появляются начиная со 2-й волны — как раз тогда, когда давление начинает точить прочность корпуса. Издалека узнаются по мигающему оранжевому маячку в иллюминаторе. Заплыв внутрь зоны модуля, батискаф медленно восстанавливает прочность, пока остаётся рядом. Как и водоросли — одноразовые и так же исчезают при большом отдалении.
+
+[b]СОВЕТ[/b]
+Прочность корпуса не восстанавливается сама по себе — на глубоких волнах стоит искать исследовательские модули заранее, не дожидаясь, пока враги станут бить вдвое больнее."
+
+[node name="BackButton" type="Button" parent="HelpPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Назад"
+
+[node name="DevDiaryPanel" type="VBoxContainer" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 40.0
+offset_right = -80.0
+offset_bottom = -40.0
+theme_override_constants/separation = 14
+
+[node name="TitleLabel" type="Label" parent="DevDiaryPanel"]
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "ДНЕВНИК РАЗРАБОТКИ"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="DevDiaryPanel"]
+custom_minimum_size = Vector2(0, 0)
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="BodyLabel" type="RichTextLabel" parent="DevDiaryPanel/ScrollContainer"]
+custom_minimum_size = Vector2(0, 0)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 16
+theme_override_font_sizes/bold_font_size = 19
+bbcode_enabled = true
+fit_content = true
+text = "[i]Не игровой лор — реальный ченджлог разработки, для истории.[/i]
+
+[b]30 августа — старт[/b]
+Заложена концепция: 2D survival в духе Brotato, но под водой — спуск на новую глубину вместо забега по кругу. Написан дизайн-документ (DESIGN.md) с уровнями, ресурсами, апгрейдами и списком открытых вопросов — часть из них (ресурс хаба, экстракция «всплыть или нырнуть», финальный босс) в игру пока не попала и осталась только в документе как план.
+
+[b]31 августа — 2 сентября — основа[/b]
+Собран базовый игровой цикл: батискаф с движением и оружием, система волн и глубины, враги-заглушки, сундуки, подбираемые предметы (опыт, аптечки, кислород), магазин оружия между волнами, HUD, меню паузы и главное меню.
+
+Изначально персонажем планировался водолаз — но внятно объяснить, зачем человек таскает на себе шесть одинаковых пушек, не получалось. Заменили на батискаф: списанный туристический аппарат для экскурсий к рифам, наспех обвешанный оружием. Балласт, целостность корпуса и урон от давления на батискаф легли естественнее, чем на водолаза (см. DESIGN.md, раздел 0) — старый арт водолаза остался в проекте неиспользуемым.
+
+[b]3 сентября — новый арт[/b]
+Старые арт-заглушки заменены на сгенерированные спрайты вдвое большего разрешения (батискаф, акула, кальмар, медуза, кислородная рыба, сундук). По пути нашлась и исправилась пара багов ориентации: батискаф сначала поплыл кормой вперёд, спрайт отзеркалили — но невнимательно, вышло только хуже (развернулся не в ту сторону), разобрались и вернули как было; акуле и медузе донастроили, в какую сторону у спрайта «нос»/«купол», чтобы разворачивались точно на игрока, а не боком.
+
+Заодно кислородная рыба и медуза получили более живое поведение. Кислородная рыба раньше плыла по одной прямой, выбранной один раз при рождении, — теперь плавает волнообразно, время от времени меняя курс (иногда — почти разворотом на 180°), и, уткнувшись в поверхность воды, сразу разворачивается вниз вместо того, чтобы скользить вдоль границы. Медуза раньше плыла к игроку с постоянной скоростью — теперь толчками, как и положено медузе: резкий рывок вперёд, потом вялый дрейф, и по кругу.
+
+[b]4 сентября — источники восстановления[/b]
+Добавлены пятна водорослей — пассивный источник кислорода. Первая версия спавнилась прямо в кадре и слишком редко; по фидбэку спавн вынесли строго за пределы видимой камеры (материализация на глазах у игрока выглядела плохо), частоту подняли (сперва вдвое, потом ещё в 5 раз), а сами пятна увеличили. При такой частоте пятна начали просто бесконечно копиться в мире — добавили одноразовость (пятно отдаёт ограниченный запас кислорода и растворяется) и деспаун по дистанции от игрока.
+
+По той же схеме добавлены затонувшие исследовательские модули — аналогичный источник, но для прочности корпуса, с ключевым отличием: появляются только с той волны, где прочность вообще начинает тратиться от давления (со 2-й) — чинить её раньше смысла нет. По фидбэку станцию увеличили вдвое и подняли частоту появления, а мигающий маячок, который сначала был отдельной точкой над сферой, перенесли в центр — теперь мигает сам иллюминатор.
+
+Обе фичи размечены как временная процедурная визуализация, нарисованная прямо кодом без единого файла-картинки (водоросли — колышущиеся стебли, модуль — сфера с иллюминатором) — в планах заменить на настоящие спрайты с анимацией.
+
+[b]9 ноября — анимированный арт[/b]
+Появилась библиотека готовых вариантов персонажей и врагов с полноценной покадровой анимацией (папка samples/) — качественный скачок по сравнению с процедурными заглушками предыдущих недель. Батискаф переведён на AnimatedSprite2D: сначала подключили один вариант («Пузырь»), затем добавили все три («Пузырь», «Гарпунёр», «Колокол») с переключением на лету прямо из меню «Отладка» — оказалось, что при переключении посреди одноразовой анимации (удар/получение урона) состояние проигрывания могло залипнуть навсегда, починили до того, как это попало в билд.
+
+Следом по той же схеме заменена рыбья часть зоопарка: медуза и кальмар уступили место пиранье (быстрая, нападает стаей, резкий бросок-укус) и удильщику (тяжёлый, светящаяся приманка разгорается перед укусом как предупреждение) — акула осталась акулой, просто получила анимацию и собственное имя «Акулёнок». Кислородную рыбу решили пока не трогать. Старые файлы медузы и кальмара из проекта не удалены (на случай отката), просто выведены из активного пула волн.
+
+По фидбэку пиранью донастроили: при первой проверке арта перепутали, в какую сторону она смотрит, — плавала хвостом вперёд; заодно оказалось, что дальность её броска-укуса была больше боевой дистанции ножа игрока, то есть кусала раньше, чем игрок вообще успевал её достать. Разворот поправили, дальность рывка сократили, саму рыбу увеличили.
+
+Следующим заходом добавлена вторая волна зверинца — три дополнительных существа (спрут-мутант, электромурена, иглобомба), появляются вместе с рыбами, а не вместо них. Иглобомба получила отдельную механику — взрывается при уничтожении, нанося урон игроку, если тот стоит рядом (добивать её в упор — плохая идея). Заодно переехали на анимацию сундук (ломается через стадии «трещины → открытие → вылет аптечки», а не исчезает мгновенно) и подбираемые предметы — сферы опыта теперь трёх разных размеров в зависимости от награды, кислородный пузырёк тоже анимирован. И отдельно ускорена сама анимация смерти врагов — на обычной скорости у роя мобов исчезновение ощущалось слишком медленным.
+
+[b]О БАЛАНСЕ[/b]
+Большая часть баланса (частота спавна, размеры зон, сколько ресурса они дают) — не результат точного расчёта, а живые правки по ощущениям от игры: слишком редко, жирно или незаметно — подкрутили, поиграли, подкрутили ещё. Многие числа в DESIGN.md (кривые сложности врагов по глубине, экономика магазина, длительность и цена световой гранаты) прямо помечены как плейсхолдеры и пока не откалиброваны."
+
+[node name="BackButton" type="Button" parent="DevDiaryPanel"]
+theme_override_font_sizes/font_size = 20
+text = "Назад"
+
+[node name="BalanceMenu" parent="." instance=ExtResource("2_balance_menu")]

@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3 uid="uid://b3x7rak2m5r8n"]
+
+[ext_resource type="Script" path="res://world/chest.gd" id="1_script"]
+[ext_resource type="SpriteFrames" path="res://pickups/items/health_chest/health_chest_frames.tres" id="2_frames"]
+[ext_resource type="Script" path="res://enemies/health_bar.gd" id="3_health_bar"]
+[ext_resource type="PackedScene" uid="uid://c8k2h4n6p1w9x" path="res://pickups/heal_pickup.tscn" id="4_pickup"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_chest"]
+radius = 36.0
+
+[node name="Chest" type="StaticBody2D"]
+collision_layer = 8
+collision_mask = 0
+script = ExtResource("1_script")
+heal_pickup_scene = ExtResource("4_pickup")
+
+[node name="Sprite2D" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.525, 0.525)
+sprite_frames = ExtResource("2_frames")
+animation = &"idle"
+autoplay = "idle"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_chest")
+
+[node name="HealthBar" type="Node2D" parent="."]
+position = Vector2(0, -50)
+script = ExtResource("3_health_bar")

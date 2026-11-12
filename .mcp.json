@@ -1,0 +1,9 @@
+{ "mcpServers": 
+    { "godot": 
+        { 
+            "command": "node", 
+            "args": ["/Users/alexanderbeley/tools/godot-mcp/build/index.js"], 
+            "env": { "GODOT_PATH": "/Users/alexanderbeley/dev/godot/Godot.app/Contents/MacOS/Godot" } 
+        } 
+    } 
+}

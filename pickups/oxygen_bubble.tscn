@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3 uid="uid://ba8d40nvd2wg2"]
+
+[ext_resource type="Script" uid="uid://b0qto42itcvj8" path="res://pickups/oxygen_bubble.gd" id="1_script"]
+[ext_resource type="SpriteFrames" path="res://pickups/items/oxygen/oxygen_frames.tres" id="2_frames"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_bubble"]
+radius = 21.0
+
+[node name="OxygenBubble" type="Area2D"]
+script = ExtResource("1_script")
+
+[node name="Sprite2D" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.6, 0.6)
+sprite_frames = ExtResource("2_frames")
+animation = &"idle"
+autoplay = "idle"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_bubble")
