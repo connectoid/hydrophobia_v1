@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://dve8xw70apj2p"]
+[gd_scene load_steps=19 format=3 uid="uid://dve8xw70apj2p"]
 
 [ext_resource type="PackedScene" uid="uid://c1u8s2v3w4x5y" path="res://player/player.tscn" id="1_player"]
 [ext_resource type="Script" uid="uid://dcs5s0tjynar6" path="res://world/level.gd" id="3_level"]
@@ -9,10 +9,6 @@
 [ext_resource type="PackedScene" uid="uid://mdc10s1ewpa1" path="res://ui/hud.tscn" id="8_hud"]
 [ext_resource type="Script" uid="uid://cppqibhacoc5h" path="res://world/chest_spawner.gd" id="9_chest_spawner"]
 [ext_resource type="PackedScene" uid="uid://b3x7rak2m5r8n" path="res://world/chest.tscn" id="10_chest"]
-[ext_resource type="Script" path="res://world/seaweed_spawner.gd" id="23_seaweed_spawner"]
-[ext_resource type="PackedScene" path="res://world/seaweed.tscn" id="24_seaweed"]
-[ext_resource type="Script" path="res://world/research_module_spawner.gd" id="25_research_module_spawner"]
-[ext_resource type="PackedScene" path="res://world/research_module.tscn" id="26_research_module"]
 [ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="12_pause_menu"]
 [ext_resource type="Resource" path="res://enemies/data/piranha.tres" id="13_piranha"]
 [ext_resource type="Resource" uid="uid://iffhq88pj8v6" path="res://enemies/data/shark.tres" id="14_shark"]
@@ -63,18 +59,4 @@ script = ExtResource("9_chest_spawner")
 chest_scene = ExtResource("10_chest")
 
 [node name="SpawnTimer" type="Timer" parent="ChestSpawner"]
-wait_time = 10.0
-
-[node name="SeaweedSpawner" type="Node2D" parent="."]
-script = ExtResource("23_seaweed_spawner")
-seaweed_scene = ExtResource("24_seaweed")
-
-[node name="SpawnTimer" type="Timer" parent="SeaweedSpawner"]
-wait_time = 2.4
-
-[node name="ResearchModuleSpawner" type="Node2D" parent="."]
-script = ExtResource("25_research_module_spawner")
-research_module_scene = ExtResource("26_research_module")
-
-[node name="SpawnTimer" type="Timer" parent="ResearchModuleSpawner"]
 wait_time = 10.0

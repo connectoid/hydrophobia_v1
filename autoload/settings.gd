@@ -68,6 +68,22 @@ const ENEMY_DENSITY_LABELS: Array[String] = [
 var enemy_density_level: int = ENEMY_DENSITY_LEVELS
 
 
+## Стартовое оружие забега (главное меню → «Оружие»): путь к WeaponData .tres.
+## Список кандидатов совпадает с пулом магазина оружия в node_2d.tscn
+## (граната туда не входит) — единственный источник правды и для меню выбора,
+## и для player.gd (который подменяет этим свой экспорт starting_weapon).
+const STARTING_WEAPON_PATHS: Array[String] = [
+	"res://weapons/knife.tres",
+	"res://weapons/pistol.tres",
+	"res://weapons/rifle.tres",
+	"res://weapons/saber.tres",
+	"res://weapons/torpedo.tres",
+]
+const DEFAULT_STARTING_WEAPON := "res://weapons/knife.tres"
+
+var starting_weapon_path: String = DEFAULT_STARTING_WEAPON
+
+
 func _ready() -> void:
 	load_settings()
 	# Применяем звук сразу при старте — сам по себе флаг sound_enabled на
@@ -125,6 +141,13 @@ func set_enemy_density_level(level: int) -> void:
 	save_settings()
 
 
+## Выбор стартового оружия на следующий забег (применяется player.gd в
+## _ready(); на уже идущий забег не влияет — там оружие своё).
+func set_starting_weapon(path: String) -> void:
+	starting_weapon_path = path
+	save_settings()
+
+
 func get_enemy_density_multiplier() -> float:
 	return float(enemy_density_level) / float(ENEMY_DENSITY_LEVELS)
 
@@ -142,6 +165,7 @@ func save_settings() -> void:
 	config.set_value(SAVE_SECTION, "show_attack_range", show_attack_range)
 	config.set_value(SAVE_SECTION, "selected_bathyscaphe_variant", selected_bathyscaphe_variant)
 	config.set_value(SAVE_SECTION, "enemy_density_level", enemy_density_level)
+	config.set_value(SAVE_SECTION, "starting_weapon_path", starting_weapon_path)
 	config.save(SAVE_PATH)
 
 
@@ -161,3 +185,4 @@ func load_settings() -> void:
 	show_attack_range = config.get_value(SAVE_SECTION, "show_attack_range", show_attack_range)
 	selected_bathyscaphe_variant = config.get_value(SAVE_SECTION, "selected_bathyscaphe_variant", selected_bathyscaphe_variant)
 	enemy_density_level = config.get_value(SAVE_SECTION, "enemy_density_level", enemy_density_level)
+	starting_weapon_path = config.get_value(SAVE_SECTION, "starting_weapon_path", starting_weapon_path)

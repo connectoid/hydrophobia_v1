@@ -8,7 +8,9 @@
 script = ExtResource("1_script")
 weapon_name = "Автомат"
 type = 1
-attack_interval = 0.25
+attack_interval = 0.06
+burst_count = 3
+burst_cooldown = 0.45
 cost = 100
 projectile_scene = ExtResource("2_projectile")
 attack_range = 300.0

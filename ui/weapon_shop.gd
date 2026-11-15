@@ -1,17 +1,21 @@
 extends CanvasLayer
-## Экран между волнами: 3 случайные карточки оружия за XP (до MAX_WEAPONS
-## единиц оружия суммарно; купленное оружие можно повторить, если такая же
-## карточка выпадет ещё раз в другой волне, но каждая конкретная карточка
-## разово — после покупки она исчезает, оставляя пустое место, чтобы нельзя
-## было закупаться бесконечно с одного слота — см. player.gd::add_weapon).
-## Кнопка "Заменить" за REROLL_COST XP полностью перекатывает весь ряд карточек
-## (в т.ч. уже опустевшие купленные слоты) — реролл, если предложенные
-## варианты не устроили. Плюс список уже купленного оружия с продажей за
-## половину цены (округление вниз) — player.gd::remove_weapon. Открывается
-## level.gd по сигналу DepthManager.wave_ended, закрывается по кнопке "Дальше"
-## (сигнал continued), после чего level.gd запускает следующую волну. Сам узел
-## и его дети — PROCESS_MODE_ALWAYS, как в pause_menu.gd, чтобы кнопки
-## работали при поставленном на паузу дереве.
+## Экран прокачки по левел-апу: 3 случайные карточки оружия за XP (до
+## MAX_WEAPONS единиц оружия суммарно; пока есть свободный слот, купленное
+## оружие можно повторить ещё одной копией — см. player.gd::add_weapon).
+## Когда слоты ЗАПОЛНЕНЫ, торговля превращается в прокачку: на карточках
+## уже имеющегося оружия кнопка «Улучшить» (тип оружия получает +1 уровень,
+## характеристики растут по кривым WeaponData.damage_at/range_at/interval_at),
+## а на карточках чужого оружия кнопка покупки неактивна — сначала освободи
+## слот продажей. Уровень оружия показан во всех карточках, в списке
+## купленного и в HUD. Кнопка "Заменить" за REROLL_COST XP полностью
+## перекатывает весь ряд карточек (в т.ч. уже опустевшие купленные слоты).
+## Список купленного оружия — с продажей за половину цены (округление вниз).
+## Открывается level.gd по сигналу player.level_up (забег непрерывный,
+## магазин ставит игру на паузу), закрывается по кнопке "Дальше" (сигнал
+## continued), после чего level.gd открывает следующий неотработанный
+## левел-ап, если он есть. Траты XP НЕ откатывают прогрессию уровня —
+## см. player.gd::_check_level_up. Сам узел и его дети — PROCESS_MODE_ALWAYS,
+## как в pause_menu.gd, чтобы кнопки работали при поставленном на паузу дереве.
 
 signal continued
 
@@ -45,7 +49,7 @@ func _ready() -> void:
 
 func open_for(player: Node) -> void:
 	_player = player
-	title_label.text = "ВОЛНА %d ИЗ %d ПРОЙДЕНА" % [DepthManager.current_wave, DepthManager.max_waves]
+	title_label.text = "НОВЫЙ УРОВЕНЬ %d" % player.level
 	_roll_cards()
 	_refresh()
 	show()
@@ -74,7 +78,6 @@ func _build_card(weapon: WeaponData) -> void:
 
 	# TODO: позже добавить иконку оружия.
 	var name_label := Label.new()
-	name_label.text = weapon.weapon_name
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", 22)
 	box.add_child(name_label)
@@ -86,41 +89,83 @@ func _build_card(weapon: WeaponData) -> void:
 	box.add_child(type_label)
 
 	var damage_label := Label.new()
-	damage_label.text = "Урон: %d" % roundi(weapon.damage)
 	damage_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	damage_label.add_theme_font_size_override("font_size", 14)
 	box.add_child(damage_label)
 
 	var range_label := Label.new()
-	range_label.text = "Дальность: %d" % roundi(weapon.attack_range)
 	range_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	range_label.add_theme_font_size_override("font_size", 14)
 	box.add_child(range_label)
 
 	var cost_label := Label.new()
-	cost_label.text = "%d XP" % weapon.cost
 	cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(cost_label)
 
 	var buy_button := Button.new()
-	buy_button.text = "Купить"
 	box.add_child(buy_button)
 
 	cards_container.add_child(panel)
 	var index := _cards.size()
-	buy_button.pressed.connect(_on_buy_pressed.bind(index))
-	_cards.append({"weapon": weapon, "button": buy_button, "panel": panel, "bought": false})
+	buy_button.pressed.connect(_on_card_pressed.bind(index))
+	_cards.append({
+		"weapon": weapon,
+		"button": buy_button,
+		"panel": panel,
+		"bought": false,
+		"name_label": name_label,
+		"damage_label": damage_label,
+		"range_label": range_label,
+		"cost_label": cost_label,
+	})
+
+
+## Тексты карточки по текущему состоянию: уровень оружия (у купленного —
+## уровень первой копии в арсенале, т.к. улучшение сольётся именно с ней;
+## у чужого — 1), эффективные урон/дальность на этом уровне и цена (покупка
+## или улучшение — смотря какой режим сейчас у кнопки).
+func _update_card(entry: Dictionary) -> void:
+	var weapon: WeaponData = entry["weapon"]
+	var owned_index: int = _player.first_index_of_weapon(weapon)
+	var owned: bool = owned_index >= 0
+	var level: int = _player.get_weapon_level_at(owned_index) if owned else 1
+	entry["name_label"].text = "%s · ур. %d" % [weapon.weapon_name, level]
+	entry["damage_label"].text = "Урон: %d" % roundi(weapon.damage_at(level))
+	entry["range_label"].text = "Дальность: %d" % roundi(weapon.range_at(level))
+	if _slots_full() and owned:
+		entry["cost_label"].text = "Улучшение: %d XP" % _player.upgrade_cost_at(owned_index)
+	else:
+		entry["cost_label"].text = "%d XP" % weapon.cost
 
 
 func _type_name(type: WeaponData.WeaponType) -> String:
 	return "Ближний" if type == WeaponData.WeaponType.MELEE else "Дальний"
 
 
-func _on_buy_pressed(index: int) -> void:
+func _slots_full() -> bool:
+	return _player.unlocked_weapons.size() >= MAX_WEAPONS
+
+
+## Кнопка карточки: пока есть свободные слоты — покупка (в т.ч. повторная
+## копия уже имеющегося оружия); когда слоты заполнены — «Улучшить» для
+## своего оружия: карточка "сливается" с первой копией этого типа в арсенале
+## (ей +1 уровень) и исчезает из предложения, как при покупке. Чужое оружие
+## при полных слотах купить нельзя — кнопка неактивна.
+func _on_card_pressed(index: int) -> void:
 	var entry := _cards[index]
 	if entry["bought"]:
 		return
 	var weapon: WeaponData = entry["weapon"]
+	if _slots_full():
+		var owned_index: int = _player.first_index_of_weapon(weapon)
+		if owned_index < 0 or not _player.can_upgrade_at(owned_index):
+			return
+		_player.spend_xp(_player.upgrade_cost_at(owned_index))
+		_player.upgrade_weapon_at(owned_index)
+		entry["bought"] = true
+		_clear_card(entry["panel"])
+		_refresh()
+		return
 	if not _can_afford(weapon):
 		return
 	_player.spend_xp(weapon.cost)
@@ -180,7 +225,7 @@ func _build_owned_entry(weapon: WeaponData, index: int) -> void:
 	panel.add_child(box)
 
 	var name_label := Label.new()
-	name_label.text = weapon.weapon_name
+	name_label.text = "%s · ур. %d" % [weapon.weapon_name, _player.get_weapon_level_at(index)]
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.add_theme_font_size_override("font_size", 16)
@@ -215,12 +260,27 @@ func _refresh() -> void:
 	status_label.text = "XP: %d    Оружие: %d/%d" % [_player.current_xp, _player.unlocked_weapons.size(), MAX_WEAPONS]
 	_rebuild_owned()
 	reroll_button.disabled = _player.current_xp < REROLL_COST
+	var slots_full := _slots_full()
 	for entry in _cards:
 		if entry["bought"]:
 			continue
 		var weapon: WeaponData = entry["weapon"]
 		var button: Button = entry["button"]
-		button.disabled = not _can_afford(weapon)
+		var owned: bool = _player.unlocked_weapons.has(weapon)
+		_update_card(entry)
+		if slots_full:
+			# Слоты заполнены: своё оружие можно улучшать, чужое — нет.
+			if owned:
+				var owned_index: int = _player.first_index_of_weapon(weapon)
+				var at_max: bool = _player.get_weapon_level_at(owned_index) >= _player.MAX_WEAPON_LEVEL
+				button.text = "Макс. уровень" if at_max else "Улучшить"
+				button.disabled = not _player.can_upgrade_at(owned_index)
+			else:
+				button.text = "Купить"
+				button.disabled = true
+		else:
+			button.text = "Купить"
+			button.disabled = not _can_afford(weapon)
 
 
 func _on_continue_pressed() -> void:

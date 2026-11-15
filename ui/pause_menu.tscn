@@ -39,6 +39,10 @@ text = "Волна 1"
 theme_override_font_sizes/font_size = 22
 text = "Продолжить"
 
+[node name="RestartButton" type="Button" parent="MainPanel"]
+theme_override_font_sizes/font_size = 22
+text = "Начать заново"
+
 [node name="ControlsButton" type="Button" parent="MainPanel"]
 theme_override_font_sizes/font_size = 22
 text = "Управление"

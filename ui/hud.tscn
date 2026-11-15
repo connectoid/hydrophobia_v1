@@ -22,43 +22,22 @@ theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(0.6, 0.9, 1, 1)
 text = "Кислород: 100"
 
-[node name="DurabilityLabel" type="Label" parent="."]
+[node name="DepthLabel" type="Label" parent="."]
 offset_left = 20.0
 offset_top = 96.0
 offset_right = 240.0
-offset_bottom = 132.0
-theme_override_font_sizes/font_size = 22
-theme_override_colors/font_color = Color(1, 0.75, 0.4, 1)
-text = "Прочность: 100/100"
-
-[node name="DepthLabel" type="Label" parent="."]
-offset_left = 20.0
-offset_top = 132.0
-offset_right = 240.0
-offset_bottom = 164.0
+offset_bottom = 128.0
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(0.75, 0.8, 0.85, 1)
-text = "Глубина: 0/250"
+text = "Глубина: 0/1000 м"
 
 [node name="XPLabel" type="Label" parent="."]
 offset_left = 20.0
-offset_top = 164.0
-offset_right = 240.0
-offset_bottom = 200.0
+offset_top = 128.0
+offset_right = 460.0
+offset_bottom = 164.0
 theme_override_font_sizes/font_size = 22
-text = "XP: 0"
-
-[node name="WaveLabel" type="Label" parent="."]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -220.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = 50.0
-theme_override_font_sizes/font_size = 22
-horizontal_alignment = 2
-text = "Волна 1"
+text = "Ур. 1 — опыт 0/100 (баланс 0)"
 
 [node name="WeaponsList" type="VBoxContainer" parent="."]
 anchors_preset = 1

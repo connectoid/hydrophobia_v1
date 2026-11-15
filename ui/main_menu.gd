@@ -11,6 +11,8 @@ extends Control
 @onready var balance_menu: Control = $BalanceMenu
 @onready var help_panel: Control = $HelpPanel
 @onready var dev_diary_panel: Control = $DevDiaryPanel
+@onready var weapon_panel: Control = $WeaponPanel
+@onready var weapons_box: VBoxContainer = $WeaponPanel/WeaponsBox
 @onready var mouse_button: Button = $ControlsPanel/MouseButton
 @onready var keyboard_button: Button = $ControlsPanel/KeyboardButton
 @onready var both_button: Button = $ControlsPanel/BothButton
@@ -25,6 +27,7 @@ func _ready() -> void:
 	_show_main()
 
 	$MainPanel/StartButton.pressed.connect(_on_start_pressed)
+	$MainPanel/WeaponButton.pressed.connect(_show_weapons)
 	$MainPanel/ControlsButton.pressed.connect(_show_controls)
 	$MainPanel/DebugButton.pressed.connect(_show_debug)
 	$MainPanel/BalanceButton.pressed.connect(_show_balance)
@@ -55,6 +58,7 @@ func _ready() -> void:
 
 	$HelpPanel/BackButton.pressed.connect(_show_main)
 	$DevDiaryPanel/BackButton.pressed.connect(_show_main)
+	$WeaponPanel/BackButton.pressed.connect(_show_main)
 
 
 func _on_start_pressed() -> void:
@@ -68,6 +72,7 @@ func _show_main() -> void:
 	balance_menu.hide()
 	help_panel.hide()
 	dev_diary_panel.hide()
+	weapon_panel.hide()
 
 
 func _show_controls() -> void:
@@ -94,6 +99,33 @@ func _show_help() -> void:
 func _show_dev_diary() -> void:
 	main_panel.hide()
 	dev_diary_panel.show()
+
+
+## Выбор начального оружия забега: список кандидатов — Settings.
+## STARTING_WEAPON_PATHS (совпадает с пулом магазина), выбор персистится
+## Settings.set_starting_weapon и подхватывается player.gd в следующем забеге.
+func _show_weapons() -> void:
+	main_panel.hide()
+	_rebuild_weapon_buttons()
+	weapon_panel.show()
+
+
+func _rebuild_weapon_buttons() -> void:
+	for child in weapons_box.get_children():
+		child.queue_free()
+	for path in Settings.STARTING_WEAPON_PATHS:
+		var data := load(path) as WeaponData
+		if data == null:
+			continue
+		var button := Button.new()
+		var checked := Settings.starting_weapon_path == path
+		button.text = str(data.weapon_name) + (" ✓" if checked else "")
+		button.custom_minimum_size = Vector2(0, 36)
+		button.pressed.connect(func():
+			Settings.set_starting_weapon(path)
+			_rebuild_weapon_buttons()
+		)
+		weapons_box.add_child(button)
 
 
 func _toggle_sound() -> void:

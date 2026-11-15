@@ -58,8 +58,6 @@ const WEAPON_TITLES := {
 
 const ITEM_TITLES := {
 	"chest": "Сундуки",
-	"seaweed": "Водоросли",
-	"module": "Станции",
 }
 
 signal player_stats_changed
@@ -86,18 +84,30 @@ func _init() -> void:
 	_def("enemy:oxygen_fish:speed", "Скорость", 180, 10, 5)
 	_def("enemy:oxygen_fish:spawn_interval", "Частота спавна, сек", 6, 1, 0.5)
 
-	# Оружие: дефолты из weapons/*.tres; rpm = 60 / attack_interval.
+	# Оружие: дефолты из weapons/*.tres; rpm = 60 / attack_interval (для
+	# автомата с очередями — темп ВНУТРИ очереди, см. burst-настройки ниже).
 	_add_weapon("knife", "Нож", 20, 90, 400)
-	_add_weapon("pistol", "Пистолет", 18, 200, 60)
-	_add_weapon("rifle", "Автомат", 10, 300, 240)
+	_add_weapon("pistol", "Пистолет", 30, 200, 60)
+	_add_weapon("rifle", "Автомат", 10, 300, 1000)
 	_add_weapon("saber", "Сабля", 35, 130, 133)
 	_add_weapon("torpedo", "Торпеда", 28, 220, 30)
 	_add_weapon("grenade", "Граната", 28, 220, 30)
 
-	# Предметы: дефолты из world/*.gd и pickups/heal_pickup.gd.
+	# Режим очереди автомата (weapon_data.gd: burst_count/burst_cooldown):
+	# выстрелов за очередь и пауза между очередями. "Выстрелов в минуту" у
+	# автомата выше — темп внутри очереди.
+	_def("weapon:rifle:burst_count", "Выстрелов в очереди", 3, 1, 1)
+	_def("weapon:rifle:burst_cooldown", "Пауза между очередями, сек", 0.45, 0.05, 0.05)
+
+	# Предметы: дефолты из world/chest.gd и pickups/heal_pickup.gd.
 	_def("items:chest:spawn_interval", "Частота спавна, сек", 10, 1, 0.5)
 	_def("items:chest:health", "Здоровье сундука", 50, 1, 1)
 	_def("items:chest:heal", "Восстанавливаемое здоровье", 20, 1, 1)
+	# Водоросли и станции восстановления временно убраны из игры (кислород —
+	# только из рыб, давление корпус не разрушает). Их определения ЗДЕСЬ
+	# СОХРАНЕНЫ, но в ITEM_TITLES не числятся — в меню они не видны, а спящие
+	# скрипты (seaweed*.gd/research_module*.gd) не упадут в Balance.get_value,
+	# когда механики вернут.
 	_def("items:seaweed:spawn_interval", "Частота спавна, сек", 2.4, 0.5, 0.1)
 	_def("items:seaweed:regen_per_second", "Восстановление кислорода в сек", 6, 1, 0.5)
 	_def("items:module:total", "Запас прочности станции", 40, 5, 5)
@@ -204,6 +214,12 @@ func _apply_weapon(weapon_id: String) -> void:
 	weapon.attack_range = get_value(prefix + "range")
 	var rpm := maxf(get_value(prefix + "rpm"), 1.0)
 	weapon.attack_interval = 60.0 / rpm
+	# Режим очереди есть не у каждого оружия (дефы только у автомата) —
+	# остальные живут дефолтами своего WeaponData.
+	if defs.has(prefix + "burst_count"):
+		weapon.burst_count = roundi(get_value(prefix + "burst_count"))
+	if defs.has(prefix + "burst_cooldown"):
+		weapon.burst_cooldown = get_value(prefix + "burst_cooldown")
 
 
 ## Ключи определений данного подраздела в порядке вставки — меню строит

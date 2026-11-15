@@ -16,16 +16,16 @@ extends Node2D
 func _ready() -> void:
 	spawn_timer.wait_time = spawn_interval
 	spawn_timer.timeout.connect(_on_spawn_timer_timeout)
-	DepthManager.wave_started.connect(_on_wave_started)
-	DepthManager.wave_ended.connect(_on_wave_ended)
+	DepthManager.run_started.connect(_on_run_started)
+	DepthManager.run_completed.connect(_on_run_completed)
 
 
-func _on_wave_started(_wave_number: int) -> void:
+func _on_run_started() -> void:
 	_refresh_interval()
 	spawn_timer.start()
 
 
-func _on_wave_ended(_wave_number: int) -> void:
+func _on_run_completed() -> void:
 	spawn_timer.stop()
 
 
@@ -54,9 +54,9 @@ func _spawn_seaweed() -> void:
 	var spawn_distance := view_size.length() * 0.5 + off_screen_margin
 	var angle := randf() * TAU
 	var spawn_pos := camera.global_position + Vector2.RIGHT.rotated(angle) * spawn_distance
-	# Выше дна уже пройденной зоны водоросли не появляются — тот же кламп, что
-	# и у сундуков/врагов (см. DepthManager.get_wave_floor_y()).
-	spawn_pos.y = maxf(spawn_pos.y, DepthManager.get_wave_floor_y())
+	# Выше уровня воды водоросли не появляются — тот же кламп, что и у
+	# сундуков/врагов (см. DepthManager.get_floor_y()).
+	spawn_pos.y = maxf(spawn_pos.y, DepthManager.get_floor_y())
 
 	var seaweed: Node2D = seaweed_scene.instantiate()
 	seaweed.global_position = spawn_pos

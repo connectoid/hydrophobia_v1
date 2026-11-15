@@ -1,8 +1,8 @@
 extends Node2D
 ## Круги зоны поражения вокруг игрока — по одному на каждое открытое оружие
-## (ближнее и дальнобойное). Радиус берётся напрямую из WeaponData.attack_range,
-## того же значения, которым задаётся урон/дальность в player.gd — числа не
-## дублируются и не могут разъехаться.
+## (ближнее и дальнобойное). Радиус берётся из WeaponData.range_at(уровень) —
+## того же эффективного значения, которым игрок целится в player.gd, с учётом
+## уровня оружия; числа не дублируются и не могут разъехаться.
 
 @export var melee_fill_color: Color = Color(1, 1, 1, 0.06)
 @export var melee_outline_color: Color = Color(1, 1, 1, 0.35)
@@ -15,6 +15,7 @@ extends Node2D
 func _ready() -> void:
 	_player.weapon_unlocked.connect(func(_weapon: WeaponData) -> void: queue_redraw())
 	_player.weapon_sold.connect(func(_weapon: WeaponData) -> void: queue_redraw())
+	_player.weapon_upgraded.connect(func(_w: WeaponData, _l: int) -> void: queue_redraw())
 	queue_redraw()
 
 
@@ -26,9 +27,11 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	for weapon: WeaponData in _player.unlocked_weapons:
+	for i in _player.unlocked_weapons.size():
+		var weapon: WeaponData = _player.unlocked_weapons[i]
+		var radius := weapon.range_at(_player.get_weapon_level_at(i))
 		if weapon.type == WeaponData.WeaponType.MELEE:
-			draw_circle(Vector2.ZERO, weapon.attack_range, melee_fill_color)
-			draw_arc(Vector2.ZERO, weapon.attack_range, 0.0, TAU, 48, melee_outline_color, outline_width)
+			draw_circle(Vector2.ZERO, radius, melee_fill_color)
+			draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, melee_outline_color, outline_width)
 		else:
-			draw_arc(Vector2.ZERO, weapon.attack_range, 0.0, TAU, 64, ranged_outline_color, outline_width)
+			draw_arc(Vector2.ZERO, radius, 0.0, TAU, 64, ranged_outline_color, outline_width)

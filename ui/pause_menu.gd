@@ -54,6 +54,7 @@ func _ready() -> void:
 	_refresh_enemy_density_label()
 
 	$GameOverPanel/RestartButton.pressed.connect(_on_restart_pressed)
+	$MainPanel/RestartButton.pressed.connect(_on_restart_pressed)
 	$GameOverPanel/MainMenuButton.pressed.connect(_on_main_menu_pressed)
 	$GameOverPanel/QuitButton.pressed.connect(func(): get_tree().quit())
 
@@ -94,13 +95,14 @@ func _open_menu() -> void:
 	var level := get_tree().get_first_node_in_group("level")
 	if level and level.game_ended:
 		return
-	# Пока открыт магазин оружия между волнами (тоже ставит паузу) — по той же причине.
+	# Пока открыт магазин оружия (открывается по левел-апу, тоже ставит паузу) —
+	# по той же причине.
 	var shop := get_tree().get_first_node_in_group("weapon_shop")
 	if shop and shop.visible:
 		return
 	show()
 	_show_main()
-	$MainPanel/WaveLabel.text = "Волна %d из %d" % [DepthManager.current_wave, DepthManager.max_waves]
+	$MainPanel/WaveLabel.text = "Глубина: %d/%d м" % [roundi(DepthManager.current_depth), roundi(DepthManager.run_depth)]
 	get_tree().paused = true
 
 

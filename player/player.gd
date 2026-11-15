@@ -10,6 +10,10 @@ extends CharacterBody2D
 signal died
 signal health_changed(current_health: float, max_health: float)
 signal experience_changed(current_xp: int)
+## Новый уровень игрока: level.gd по нему открывает магазин оружия/прокачки
+## (см. _check_level_up). Уровни считаются по СУММАРНОМУ заработанному опыту
+## и не зависят от трат XP в магазине.
+signal level_up(new_level: int)
 signal oxygen_changed(current_oxygen: float, max_oxygen: float)
 signal durability_changed(current_durability: float, max_durability: float)
 signal weapon_unlocked(weapon: WeaponData)
@@ -31,18 +35,23 @@ const LAYER_ENEMY := 4
 @export var max_health: float = 100.0
 
 ## Кислород тратится постоянно (DESIGN.md п.3) — полного бака без пополнения
-## хватает примерно на max_oxygen/oxygen_drain_rate секунд, меньше длительности
-## волны, поэтому нужно активно искать пузырьки. При 0 — игрок тонет (die()).
+## хватает примерно на max_oxygen/oxygen_drain_rate секунд, поэтому нужно
+## активно искать кислородных рыб. При 0 — игрок тонет (die()).
 @export var max_oxygen: float = 100.0
 @export var oxygen_drain_rate: float = 4.0
 
-## Прочность корпуса — НЕ восстанавливается между волнами (в отличие от
-## здоровья/кислорода), пока нет отдельного ресурса для ремонта (сделаем
-## позже). Волна 1 её не трогает; с волны 2 растущее давление медленно точит
-## прочность (см. _physics_process), и чем она ниже, тем больше урона наносят
-## враги (см. _durability_damage_multiplier/take_damage).
+## Прогрессия уровней игрока: следующий уровень требует в level_xp_growth раз
+## больше опыта, чем предыдущий (100 → 150 → 225 → ...). Прогресс
+## (_level_xp_progress) копится с ЛЮБОГО полученного опыта и не уменьшается от
+## трат XP в магазине — текущий баланс current_xp является только валютой.
+@export var level_xp_base: int = 100
+@export var level_xp_growth: float = 1.5
+
+## Прочность корпуса: давление её пока НЕ разрушает (забег сфокусирован на
+## отражении атак врагов; дренаж и ремонт станциями временно убраны). Чем ниже
+## прочность, тем больше урона наносят враги (см.
+## _durability_damage_multiplier/take_damage) — при полной множитель = 1.
 @export var max_durability: float = 100.0
-@export var durability_drain_per_wave: float = 0.6 # ед./сек за каждую волну после первой
 @export var max_durability_damage_multiplier: float = 2.0 # множитель урона врагов при прочности 0
 
 @export var mouse_move_deadzone: float = 20.0 # px вокруг курсора, где игрок не дёргается
@@ -63,6 +72,12 @@ const LAYER_ENEMY := 4
 
 var current_health: float
 var current_xp: int = 0
+## Уровень игрока и прогресс текущего уровня. xp_to_next — сколько суммарного
+## опыта нужно собрать на этом уровне; траты XP в магазине прогресс не
+## откатывают (валюта и прогрессия раздельны).
+var level: int = 1
+var xp_to_next: int = 100
+var _level_xp_progress: int = 0
 var current_oxygen: float
 var current_durability: float
 var movement_input: Vector2 = Vector2.ZERO # актуальное направление движения (клавиатура или мышь) — читает depth_background.gd
@@ -70,6 +85,25 @@ var movement_input: Vector2 = Vector2.ZERO # актуальное направл
 ## WeaponData — у каждого элемента свой кулдаун в _weapon_cooldowns (тот же индекс).
 var unlocked_weapons: Array[WeaponData] = []
 var _weapon_cooldowns: Array[float] = []
+## Состояние очереди для каждого слота (тот же индекс): сколько выстрелов
+## очереди ещё осталось отдать и таймер до следующего выстрела очереди.
+## См. burst_count/burst_cooldown в weapon_data.gd и _process_weapons.
+var _burst_remaining: Array[int] = []
+var _burst_timers: Array[float] = []
+
+## Уровни (тиры) оружия: ПЕРЕДИННАЯ единица арсенала (параллельный массив к
+## unlocked_weapons, тот же индекс). Растут кнопкой «Улучшить» в магазине
+## (ui/weapon_shop.gd) при заполненных слотах: карточка оружия "сливается" с
+## ОДНОЙ единицей в арсенале — её уровень +1, а карточка исчезает из
+## предложения, как при покупке. Характеристики читаются через
+## WeaponData.damage_at/range_at/interval_at. Продажа единицы убирает её
+## уровень вместе с ней.
+var _weapon_levels: Array[int] = []
+
+signal weapon_upgraded(weapon: WeaponData, new_level: int)
+
+## Потолок прокачки одной единицы оружия.
+const MAX_WEAPON_LEVEL := 5
 
 ## Общий "стаггер" между бросками торпед — отдельный от attack_interval
 ## каждой отдельной торпеды. Без него, если экипировано несколько торпед,
@@ -104,26 +138,20 @@ func _ready() -> void:
 	# в маске остаётся только "мир" под будущую статичную геометрию уровня.
 	collision_mask = LAYER_WORLD
 
-	if starting_weapon:
-		add_weapon(starting_weapon)
-
+	# Стартовое оружие: выбор из главного меню (Settings.starting_weapon_path)
+	# переопределяет экспорт starting_weapon сцены — тот остаётся фолбэком на
+	# случай отсутствующего/битого файла настроек.
+	var chosen_starting := load(Settings.starting_weapon_path) as WeaponData
+	var starting := chosen_starting if chosen_starting else starting_weapon
+	if starting:
+		add_weapon(starting)
 	sprite.animation_finished.connect(_on_sprite_animation_finished)
 	_apply_bathyscaphe_variant(Settings.selected_bathyscaphe_variant)
 	Settings.bathyscaphe_variant_changed.connect(_apply_bathyscaphe_variant)
 
-	# Кислород и здоровье — ресурсы волны (DESIGN.md п.3), не всего забега:
-	# пополняются на каждый новый заплыв, иначе после магазина между волнами
-	# игрок стартует следующую волну с тем, что осталось (часто у нуля).
-	DepthManager.wave_started.connect(_on_wave_started)
-
-
-func _on_wave_started(_wave_number: int) -> void:
-	if _is_dead:
-		return
-	current_oxygen = max_oxygen
-	oxygen_changed.emit(current_oxygen, max_oxygen)
-	current_health = max_health
-	health_changed.emit(current_health, max_health)
+	# Забег один и непрерывный: здоровье/кислород больше не пополняются между
+	# "волнами" (их нет) — ресурсы приходится беречь всю дистанцию.
+	xp_to_next = _level_xp_requirement(level)
 
 
 func _physics_process(delta: float) -> void:
@@ -155,8 +183,6 @@ func _physics_process(delta: float) -> void:
 			die()
 			return
 
-		_process_durability_drain(delta)
-
 	var target_velocity := input_dir * base_speed * DepthManager.get_speed_multiplier()
 
 	if input_dir != Vector2.ZERO:
@@ -166,13 +192,12 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-	# Дно уже пройденной зоны (DepthManager.get_wave_floor_y()) — жёсткий
-	# физический потолок текущей волны: всплыть выше него нельзя. Для волны 1
-	# это уровень воды (SURFACE_Y); для волны 2+ — отметка, на которой
-	# началась текущая волна, т.е. граница с предыдущей зоной.
-	var wave_floor_y := DepthManager.get_wave_floor_y()
-	if global_position.y < wave_floor_y:
-		global_position.y = wave_floor_y
+	# Уровень воды (DepthManager.get_floor_y()) — физический потолок: всплыть
+	# выше поверхности нельзя (прежняя "переезжающая" граница волны упразднена
+	# вместе с волнами).
+	var floor_y := DepthManager.get_floor_y()
+	if global_position.y < floor_y:
+		global_position.y = floor_y
 		velocity.y = maxf(velocity.y, 0.0)
 
 	DepthManager.update_depth(global_position.y)
@@ -212,11 +237,37 @@ func _process_weapons(delta: float) -> void:
 
 	var claimed_targets: Array[Node2D] = []
 	for i in unlocked_weapons.size():
+		var weapon := unlocked_weapons[i]
+		var level := _weapon_levels[i]
 		if _weapon_cooldowns[i] > 0.0:
 			_weapon_cooldowns[i] -= delta
 			continue
-		if _fire_weapon(unlocked_weapons[i], claimed_targets):
-			_weapon_cooldowns[i] = unlocked_weapons[i].attack_interval
+		# Середина очереди: добираем выстрелы с темпом attack_interval,
+		# независимо от основного кулдауна (он нулевой, пока очередь жива).
+		if _burst_remaining[i] > 0:
+			_burst_timers[i] -= delta
+			if _burst_timers[i] > 0.0:
+				continue
+			if _fire_weapon(weapon, claimed_targets, level):
+				_burst_remaining[i] -= 1
+				_play_one_shot_animation(&"attack")
+				if _burst_remaining[i] > 0:
+					_burst_timers[i] = weapon.interval_at(level)
+				else:
+					# Очередь отстреляна — пауза до следующей.
+					_weapon_cooldowns[i] = weapon.interval_at(level) + weapon.burst_cooldown
+			else:
+				# Цель исчезла посреди очереди — не тратить выстрелы в пустоту:
+				# прерываем очередь, следующий кадр начнёт новую по готовности.
+				_burst_remaining[i] = 0
+			continue
+		if _fire_weapon(weapon, claimed_targets, level):
+			if weapon.burst_count > 1:
+				# Первая пуля очереди уже вышла; остальные доберёт ветка выше.
+				_burst_remaining[i] = weapon.burst_count - 1
+				_burst_timers[i] = weapon.interval_at(level)
+			else:
+				_weapon_cooldowns[i] = weapon.interval_at(level) + weapon.burst_cooldown
 			# Быстрое оружие (напр. нож, attack_interval 0.15с) успевает
 			# перезапустить "attack" раньше, чем та доиграет до конца — тогда
 			# она просто крутится на повторе всё время боя, пока не станет
@@ -224,25 +275,25 @@ func _process_weapons(delta: float) -> void:
 			_play_one_shot_animation(&"attack")
 
 
-func _fire_weapon(weapon: WeaponData, claimed_targets: Array[Node2D]) -> bool:
+func _fire_weapon(weapon: WeaponData, claimed_targets: Array[Node2D], level: int) -> bool:
 	if weapon.type == WeaponData.WeaponType.MELEE:
-		return _fire_melee(weapon)
-	return _fire_ranged(weapon, claimed_targets)
+		return _fire_melee(weapon, level)
+	return _fire_ranged(weapon, claimed_targets, level)
 
 
 ## Дистанция меряется до края коллизии цели, а не до её центра — иначе крупный
 ## враг (например увеличенная акула) получал бы удар только когда его центр
 ## уже глубоко внутри attack_range, хотя визуально коллизия давно пересекла
 ## границу круга атаки.
-func _fire_melee(weapon: WeaponData) -> bool:
+func _fire_melee(weapon: WeaponData, level: int) -> bool:
 	var hit_something := false
 	for body in get_tree().get_nodes_in_group("attackable"):
 		if not body.has_method("take_damage"):
 			continue
-		var effective_range := weapon.attack_range + _get_collision_radius(body)
+		var effective_range := weapon.range_at(level) + _get_collision_radius(body)
 		if global_position.distance_squared_to(body.global_position) <= effective_range * effective_range:
-			body.take_damage(weapon.damage)
-			_spawn_melee_swing(weapon, body.global_position)
+			body.take_damage(weapon.damage_at(level))
+			_spawn_melee_swing(weapon, body.global_position, level)
 			hit_something = true
 	if hit_something:
 		SFX.play(weapon.fire_sound)
@@ -259,7 +310,7 @@ func _fire_melee(weapon: WeaponData) -> bool:
 ## локальных координатах; Player.rotation всегда 0 (ориентация передаётся
 ## через sprite.flip_h, не поворот узла), поэтому локальный rotation
 ## эффекта не складывается с посторонним поворотом.
-func _spawn_melee_swing(weapon: WeaponData, target_position: Vector2) -> void:
+func _spawn_melee_swing(weapon: WeaponData, target_position: Vector2, level: int) -> void:
 	if melee_swing_scene == null:
 		return
 	var swing: Node2D = melee_swing_scene.instantiate()
@@ -270,7 +321,7 @@ func _spawn_melee_swing(weapon: WeaponData, target_position: Vector2) -> void:
 	# отрисуется с дефолтным length.
 	swing.position = Vector2.ZERO
 	swing.rotation = (target_position - global_position).angle()
-	swing.length = weapon.attack_range
+	swing.length = weapon.range_at(level)
 	add_child(swing)
 
 
@@ -286,7 +337,7 @@ func _get_collision_radius(body: Node) -> float:
 	return 0.0
 
 
-func _fire_ranged(weapon: WeaponData, claimed_targets: Array[Node2D]) -> bool:
+func _fire_ranged(weapon: WeaponData, claimed_targets: Array[Node2D], level: int) -> bool:
 	if weapon.projectile_scene == null:
 		return false
 
@@ -294,9 +345,9 @@ func _fire_ranged(weapon: WeaponData, claimed_targets: Array[Node2D]) -> bool:
 	# самое плотное скопление — и не "клеймит" цель (бьёт по всем в радиусе,
 	# claimed_targets тут не при чём).
 	if weapon.splash_radius > 0.0:
-		return _fire_torpedo(weapon)
+		return _fire_torpedo(weapon, level)
 
-	var target := _find_nearest_target(weapon.attack_range, claimed_targets)
+	var target := _find_nearest_target(weapon.range_at(level), claimed_targets)
 	if target == null:
 		return false
 	claimed_targets.append(target)
@@ -304,12 +355,12 @@ func _fire_ranged(weapon: WeaponData, claimed_targets: Array[Node2D]) -> bool:
 	var projectile: Node2D = weapon.projectile_scene.instantiate()
 	get_tree().current_scene.add_child(projectile)
 	projectile.global_position = global_position
-	projectile.launch(target, target.global_position - global_position, weapon.damage)
+	projectile.launch(target, target.global_position - global_position, weapon.damage_at(level))
 	SFX.play(weapon.fire_sound)
 	return true
 
 
-func _fire_torpedo(weapon: WeaponData) -> bool:
+func _fire_torpedo(weapon: WeaponData, level: int) -> bool:
 	# Общий стаггер между бросками (см. TORPEDO_THROW_STAGGER) — не даёт
 	# нескольким экипированным торпедам улететь в одну и ту же цель одним
 	# кадром; личный кулдаун весом weapon.attack_interval при этом не
@@ -317,7 +368,7 @@ func _fire_torpedo(weapon: WeaponData) -> bool:
 	if _torpedo_throw_cooldown > 0.0:
 		return false
 
-	var target := _find_cluster_target(weapon.attack_range)
+	var target := _find_cluster_target(weapon.range_at(level))
 	if target == null:
 		return false
 
@@ -325,7 +376,7 @@ func _fire_torpedo(weapon: WeaponData) -> bool:
 	get_tree().current_scene.add_child(projectile)
 	projectile.global_position = global_position
 	var direction := target.global_position - global_position
-	projectile.launch(direction, weapon.damage, weapon.splash_radius, weapon.attack_range)
+	projectile.launch(direction, weapon.damage_at(level), weapon.splash_radius, weapon.range_at(level))
 	SFX.play(weapon.fire_sound)
 	_torpedo_throw_cooldown = TORPEDO_THROW_STAGGER
 	return true
@@ -403,11 +454,33 @@ func _find_nearest_among(bodies: Array, max_range: float, claimed: Array[Node2D]
 
 func add_experience(amount: int) -> void:
 	current_xp += amount
+	_level_xp_progress += amount
 	experience_changed.emit(current_xp)
+	_check_level_up()
 
 
-## XP тратится в магазине между волнами (ui/weapon_shop.gd) — сам магазин
-## проверяет платёжеспособность перед вызовом, здесь без дополнительных проверок.
+## Сколько суммарного опыта нужно собрать на данном уровне: прогрессивная
+## шкала, каждый следующий уровень в level_xp_growth раз дороже
+## (100 → 150 → 225 → ...).
+func _level_xp_requirement(for_level: int) -> int:
+	return roundi(level_xp_base * pow(level_xp_growth, for_level - 1))
+
+
+## Прогресс уровня копится с ЛЮБОГО полученного опыта и не зависит от трат XP
+## в магазине. За один подбор может накопиться несколько уровней — цикл
+## обрабатывает все и шлёт level_up на каждый (level.gd переоткроет магазин
+## нужное число раз).
+func _check_level_up() -> void:
+	while _level_xp_progress >= xp_to_next:
+		_level_xp_progress -= xp_to_next
+		level += 1
+		xp_to_next = _level_xp_requirement(level)
+		level_up.emit(level)
+
+
+## XP тратится в магазине (ui/weapon_shop.gd, открывается по левел-апу) — сам
+## магазин проверяет платёжеспособность перед вызовом, здесь без проверок.
+## На прогресс уровня трата НЕ влияет (см. _level_xp_progress).
 func spend_xp(amount: int) -> void:
 	current_xp -= amount
 	experience_changed.emit(current_xp)
@@ -418,8 +491,44 @@ func spend_xp(amount: int) -> void:
 func add_weapon(weapon: WeaponData) -> void:
 	unlocked_weapons.append(weapon)
 	_weapon_cooldowns.append(0.0)
+	_burst_remaining.append(0)
+	_burst_timers.append(0.0)
+	_weapon_levels.append(1)
 	weapon_unlocked.emit(weapon)
 	print("Открыто оружие: %s" % weapon.weapon_name)
+
+
+## Уровень единицы арсенала по индексу (1 = куплена/стартовая, ещё не улучшена).
+func get_weapon_level_at(index: int) -> int:
+	if index < 0 or index >= _weapon_levels.size():
+		return 1
+	return _weapon_levels[index]
+
+
+## Индекс первой копии данного типа оружия в арсенале (-1, если её нет) —
+## магазин улучшает именно её (см. ui/weapon_shop.gd).
+func first_index_of_weapon(weapon: WeaponData) -> int:
+	return unlocked_weapons.find(weapon)
+
+
+## Цена улучшения до следующего уровня: базовая цена оружия × текущий уровень
+## единицы (1→2 стоит cost, 2→3 — 2×cost и т.д.).
+func upgrade_cost_at(index: int) -> int:
+	return unlocked_weapons[index].cost * get_weapon_level_at(index)
+
+
+func can_upgrade_at(index: int) -> bool:
+	return get_weapon_level_at(index) < MAX_WEAPON_LEVEL and current_xp >= upgrade_cost_at(index)
+
+
+## Прокачка ОДНОЙ единицы арсенала (карточка магазина, "слившаяся" с ней,
+## исчезает из предложения — это делает магазин). XP тратит вызывающая
+## сторона, здесь только рост уровня и сигнал для HUD/индикатора.
+func upgrade_weapon_at(index: int) -> void:
+	var new_level := get_weapon_level_at(index) + 1
+	_weapon_levels[index] = new_level
+	weapon_upgraded.emit(unlocked_weapons[index], new_level)
+	print("Оружие улучшено: %s → ур. %d" % [unlocked_weapons[index].weapon_name, new_level])
 
 
 ## Продажа оружия в магазине (ui/weapon_shop.gd) — возврат XP считает и
@@ -430,6 +539,9 @@ func remove_weapon(index: int) -> void:
 	var weapon := unlocked_weapons[index]
 	unlocked_weapons.remove_at(index)
 	_weapon_cooldowns.remove_at(index)
+	_burst_remaining.remove_at(index)
+	_burst_timers.remove_at(index)
+	_weapon_levels.remove_at(index)
 	weapon_sold.emit(weapon)
 	print("Продано оружие: %s" % weapon.weapon_name)
 
@@ -462,10 +574,10 @@ func regenerate_oxygen(amount: float) -> void:
 
 
 ## Пассивное восстановление прочности корпуса небольшими порциями каждый
-## кадр (затонувшие исследовательские модули, см. world/research_module.gd) —
-## без цветовой вспышки, по той же причине, что и regenerate_oxygen. Прочность
-## обычно только тратится (_process_durability_drain), это единственный
-## источник её восстановления в игре на сейчас.
+## кадр (затонувшие исследовательские модули, см. world/research_module.gd).
+## Давление прочность пока не разрушает (дренаж убран), так что на текущий
+## момент прочность всегда полная и множитель урона = 1 — метод оставлен на
+## будущее возвращение механики.
 func regenerate_durability(amount: float) -> void:
 	if _is_dead:
 		return
@@ -532,20 +644,10 @@ func _flash(color: Color, duration: float = 0.25) -> void:
 	tween.tween_property(sprite, "modulate", _base_modulate, duration)
 
 
-## Волна 1 прочность не трогает; с волны 2 растущее (вместе с номером волны)
-## давление медленно её точит. Не восстанавливается сама — только будущим
-## ремонтным ресурсом, поэтому копится за весь забег, а не сбрасывается на
-## каждой волне, как здоровье/кислород (см. _on_wave_started).
-func _process_durability_drain(delta: float) -> void:
-	if DepthManager.current_wave < 2 or current_durability <= 0.0:
-		return
-	var drain := durability_drain_per_wave * (DepthManager.current_wave - 1)
-	current_durability = maxf(current_durability - drain * delta, 0.0)
-	durability_changed.emit(current_durability, max_durability)
-
-
 ## Чем ниже прочность корпуса, тем больнее бьют враги — при 0 урон умножается
 ## на max_durability_damage_multiplier, при полной прочности множитель = 1.
+## Давление прочность пока не точит (дренаж убран вместе с волнами) —
+## множитель остаётся единицей, пока прочность не появится как механика.
 func _durability_damage_multiplier() -> float:
 	var durability_fraction := current_durability / max_durability
 	return lerpf(1.0, max_durability_damage_multiplier, 1.0 - durability_fraction)

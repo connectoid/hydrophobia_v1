@@ -1,9 +1,10 @@
 extends Node2D
-## Точка входа игрового цикла: запускает волну 1, по её окончании открывает
-## магазин оружия (ui/weapon_shop.gd) и переходит на следующую волну — так до
-## смерти игрока или прохождения последней волны (DepthManager.max_waves),
-## после которой вместо магазина объявляется победа. Сложность волн пока не
-## меняется (DESIGN.md, открытый вопрос). На конце игры (смерть или победа)
+## Точка входа игрового цикла: один непрерывный забег — старт с поверхности и
+## спуск на DepthManager.run_depth метров (победа) либо смерть игрока
+## (поражение). Волн больше нет: магазин оружия (ui/weapon_shop.gd) открывается
+## по левел-апу игрока (сигнал level_up в player.gd) прямо посреди погружения,
+## с паузой; если за один pickup накопилось несколько уровней — магазин
+## переоткрывается нужное число раз подряд. На конце игры (смерть или победа)
 ## ставит дерево сцены на паузу (враги/спавнер/таймер реально останавливаются).
 ## Сам узел НЕ в PROCESS_MODE_ALWAYS — почти все игровые объекты (враги,
 ## сундуки, снаряды, пикапы) создаются в рантайме как дети get_tree().current_scene,
@@ -15,12 +16,13 @@ extends Node2D
 signal game_lost
 signal game_won
 
-@export var wave_number: int = 1
-
 var game_ended: bool = false # читается pause_menu.gd — true после смерти ИЛИ победы
 
 var _player: Node
 var _shop: Node
+## Левел-апы, полученные, но ещё не отоваренные в магазине (несколько уровней
+## за один подбор опыта) — магазин переоткрывается, пока счётчик не обнулится.
+var _pending_level_ups: int = 0
 
 
 func _ready() -> void:
@@ -29,6 +31,7 @@ func _ready() -> void:
 	_player = get_tree().get_first_node_in_group("player")
 	if _player:
 		_player.died.connect(_on_player_died)
+		_player.level_up.connect(_on_player_level_up)
 
 	# WeaponShop — сиблинг этого узла под тем же корнем; его _ready() уже
 	# отработал к этому моменту (дети сцены готовятся раньше корня), поэтому
@@ -37,51 +40,55 @@ func _ready() -> void:
 	if _shop:
 		_shop.continued.connect(_on_shop_continued)
 
-	DepthManager.wave_ended.connect(_on_wave_ended)
-	DepthManager.start_wave(wave_number)
-	print("Волна %d начата" % wave_number)
+	DepthManager.run_completed.connect(_on_run_completed)
+	DepthManager.start_run()
+	print("Забег начат: цель — %d м" % roundi(DepthManager.run_depth))
 
 
 func _on_player_died() -> void:
 	if game_ended:
 		return
 	game_ended = true
-	DepthManager.end_wave()
+	DepthManager.run_active = false
 	_clear_enemies()
 	print("Игрок погиб. Игра окончена. Нажмите Enter, чтобы начать заново.")
 	game_lost.emit()
 	get_tree().paused = true
 
 
-func _on_wave_ended(_wave_number: int) -> void:
+## Цель забега достигнута (DepthManager.run_depth) — победа.
+func _on_run_completed() -> void:
 	if game_ended:
 		return
-	_clear_enemies()
-	print("Волна %d пройдена" % wave_number)
-	if wave_number >= DepthManager.max_waves:
-		_on_victory()
-		return
-	if _shop and _player:
-		_shop.open_for(_player)
-	else:
-		_start_next_wave()
-
-
-func _on_victory() -> void:
 	game_ended = true
-	print("Все волны пройдены! Победа. Нажмите Enter, чтобы начать заново.")
+	_clear_enemies()
+	print("Глубина %d м достигнута! Победа. Нажмите Enter, чтобы начать заново." % roundi(DepthManager.run_depth))
 	game_won.emit()
 	get_tree().paused = true
 
 
+func _on_player_level_up(_new_level: int) -> void:
+	if game_ended:
+		return
+	_pending_level_ups += 1
+	_open_shop_if_possible()
+
+
 func _on_shop_continued() -> void:
-	_start_next_wave()
+	_pending_level_ups = maxi(_pending_level_ups - 1, 0)
+	# Следующий неотработанный левел-ап (если был мульти-уровень) открываем не
+	# в тот же кадр: магазин снимает паузу в continued, а open_for ставит её
+	# снова — через deferred порядок гарантирован.
+	_open_shop_if_possible.call_deferred()
 
 
-func _start_next_wave() -> void:
-	wave_number += 1
-	DepthManager.start_wave(wave_number)
-	print("Волна %d начата" % wave_number)
+func _open_shop_if_possible() -> void:
+	if game_ended or _pending_level_ups <= 0:
+		return
+	if _shop and _player:
+		_shop.open_for(_player)
+	else:
+		_pending_level_ups = 0
 
 
 func _clear_enemies() -> void:

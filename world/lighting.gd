@@ -34,11 +34,26 @@ uniform float radius = 260.0;
 uniform float falloff = 160.0;
 uniform float darkness : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 tint = vec3(0.02, 0.05, 0.1);
+// Дополнительные источники света (биолюминесценция, напр. фонарик удильщика,
+// см. enemies/angler_lure.gd): x, y — экранные px, z — радиус, w — сила дыры.
+// 32 слота: к глубине удильщики накапливаются, и прежнего лимита в 8 не
+// хватало — лишние рыбы оказывались без светового пятна.
+uniform vec4 extra_lights[32];
+uniform int extra_count = 0;
 
 void fragment() {
 	vec2 px = UV * resolution;
-	float d = distance(px, center);
-	float k = smoothstep(radius, radius + falloff, d);
+	// 1 внутри круга фонаря игрока, 0 снаружи.
+	float hole = 1.0 - smoothstep(radius, radius + falloff, distance(px, center));
+	for (int i = 0; i < 32; i++) {
+		if (i >= extra_count) {
+			break;
+		}
+		vec4 light = extra_lights[i];
+		float d = distance(px, light.xy);
+		hole += (1.0 - smoothstep(light.z * 0.45, light.z, d)) * light.w;
+	}
+	float k = 1.0 - clamp(hole, 0.0, 1.0);
 	COLOR = vec4(tint, k * darkness);
 }
 "
@@ -84,3 +99,34 @@ func _process(_delta: float) -> void:
 	_material.set_shader_parameter("falloff", falloff)
 	_material.set_shader_parameter("darkness", darkness)
 	_material.set_shader_parameter("tint", Vector3(dark_color.r, dark_color.g, dark_color.b))
+
+	# Дополнительные "дыры" темноты: узлы группы darkness_light (биолюминесценция
+	# удильщика, enemies/angler_lure.gd) — мировые позиции переводим в экранные
+	# тем же canvas transform, что и центр фонаря игрока. Берём только
+	# источники, попадающие в расширенный вьюпорт (заэкранным дыры не нужны —
+	# они лишь занимали бы слоты видимых), лимит 32 — см. шейдер. Массив
+	# uniform'а фиксированной длины — добиваем ровно до 32 нулями силы (радиус
+	# 1, а не 0, чтобы smoothstep не словил деление на ноль на паддинге).
+	var extra := PackedVector4Array()
+	var extra_count := 0
+	var view_rect := Rect2(Vector2.ZERO, view).grow(300.0)
+	for node in get_tree().get_nodes_in_group("darkness_light"):
+		if extra_count >= 32:
+			break
+		var light_node := node as Node2D
+		if light_node == null:
+			continue
+		var screen_pos: Vector2 = get_viewport().get_canvas_transform() * light_node.global_position
+		if not view_rect.has_point(screen_pos):
+			continue
+		extra.append(Vector4(
+			screen_pos.x,
+			screen_pos.y,
+			float(light_node.get("light_radius")),
+			float(light_node.get("light_strength"))
+		))
+		extra_count += 1
+	while extra.size() < 32:
+		extra.append(Vector4(0.0, 0.0, 1.0, 0.0))
+	_material.set_shader_parameter("extra_lights", extra)
+	_material.set_shader_parameter("extra_count", extra_count)

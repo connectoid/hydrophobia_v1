@@ -12,16 +12,16 @@ extends Node2D
 func _ready() -> void:
 	spawn_timer.wait_time = spawn_interval
 	spawn_timer.timeout.connect(_on_spawn_timer_timeout)
-	DepthManager.wave_started.connect(_on_wave_started)
-	DepthManager.wave_ended.connect(_on_wave_ended)
+	DepthManager.run_started.connect(_on_run_started)
+	DepthManager.run_completed.connect(_on_run_completed)
 
 
-func _on_wave_started(_wave_number: int) -> void:
+func _on_run_started() -> void:
 	_refresh_interval()
 	spawn_timer.start()
 
 
-func _on_wave_ended(_wave_number: int) -> void:
+func _on_run_completed() -> void:
 	spawn_timer.stop()
 
 
@@ -50,7 +50,7 @@ func _spawn_chest() -> void:
 
 	var chest: Node2D = chest_scene.instantiate()
 	chest.global_position = camera.global_position + offset
-	# Выше дна уже пройденной зоны сундуки не появляются — прижимаем точку
-	# спавна к границе текущей волны (см. DepthManager.get_wave_floor_y()).
-	chest.global_position.y = maxf(chest.global_position.y, DepthManager.get_wave_floor_y())
+	# Выше уровня воды сундуки не появляются — прижимаем точку спавна к
+	# границе (см. DepthManager.get_floor_y()).
+	chest.global_position.y = maxf(chest.global_position.y, DepthManager.get_floor_y())
 	get_tree().current_scene.add_child(chest)

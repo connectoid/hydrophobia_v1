@@ -3,15 +3,19 @@ extends Node2D
 ## вокруг игрока, строго за пределами видимой камерой области — та же логика
 ## закадрового спавна, что и у seaweed_spawner.gd (см. его комментарий).
 ##
-## В отличие от водорослей, появляются не с первой волны: чинить прочность
-## корпуса есть смысл только там, где она вообще расходуется давлением (см.
-## player.gd::_process_durability_drain — драйн начинается с current_wave >=
-## min_wave). До этой волны таймер тикает вхолостую, ничего не спавня.
+## ВРЕМЕННО НЕ ИСПОЛЬЗУЕТСЯ: узел убран из node_2d.tscn — давление корпус
+## пока не разрушает (дренаж прочности отключён вместе с волнами), чинить
+## нечего. Скрипт жив и переведён на новую систему забега (run_started/
+## run_completed, тир глубины вместо номера волны), чтобы механику можно было
+## вернуть простой вставкой узла в сцену.
+##
+## Появляются не с первого тира: чинить прочность есть смысл только там, где
+## она расходуется давлением (min_tier). До этого тира таймер тикает вхолостую.
 
 @export var research_module_scene: PackedScene
 @export var spawn_interval: float = 10.0
 @export var off_screen_margin: float = 150.0
-@export var min_wave: int = 2
+@export var min_tier: int = 2
 
 @onready var spawn_timer: Timer = $SpawnTimer
 
@@ -19,15 +23,15 @@ extends Node2D
 func _ready() -> void:
 	spawn_timer.wait_time = spawn_interval
 	spawn_timer.timeout.connect(_on_spawn_timer_timeout)
-	DepthManager.wave_started.connect(_on_wave_started)
-	DepthManager.wave_ended.connect(_on_wave_ended)
+	DepthManager.run_started.connect(_on_run_started)
+	DepthManager.run_completed.connect(_on_run_completed)
 
 
-func _on_wave_started(_wave_number: int) -> void:
+func _on_run_started() -> void:
 	spawn_timer.start()
 
 
-func _on_wave_ended(_wave_number: int) -> void:
+func _on_run_completed() -> void:
 	spawn_timer.stop()
 
 
@@ -36,7 +40,7 @@ func _on_spawn_timer_timeout() -> void:
 
 
 func _spawn_research_module() -> void:
-	if research_module_scene == null or DepthManager.current_wave < min_wave:
+	if research_module_scene == null or DepthManager.get_depth_tier() < min_tier:
 		return
 	var camera := get_viewport().get_camera_2d()
 	if camera == null:
@@ -46,9 +50,9 @@ func _spawn_research_module() -> void:
 	var spawn_distance := view_size.length() * 0.5 + off_screen_margin
 	var angle := randf() * TAU
 	var spawn_pos := camera.global_position + Vector2.RIGHT.rotated(angle) * spawn_distance
-	# Выше дна уже пройденной зоны модули не появляются — тот же кламп, что и
-	# у сундуков/врагов/водорослей (см. DepthManager.get_wave_floor_y()).
-	spawn_pos.y = maxf(spawn_pos.y, DepthManager.get_wave_floor_y())
+	# Выше уровня воды модули не появляются — тот же кламп, что и у
+	# сундуков/врагов/водорослей (см. DepthManager.get_floor_y()).
+	spawn_pos.y = maxf(spawn_pos.y, DepthManager.get_floor_y())
 
 	var research_module: Node2D = research_module_scene.instantiate()
 	research_module.global_position = spawn_pos
