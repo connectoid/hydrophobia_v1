@@ -1,15 +1,17 @@
 extends CanvasLayer
 ## Экран прокачки по левел-апу: 3 случайные карточки оружия за XP (до
-## MAX_WEAPONS единиц оружия суммарно; пока есть свободный слот, купленное
-## оружие можно повторить ещё одной копией — см. player.gd::add_weapon).
-## Когда слоты ЗАПОЛНЕНЫ, торговля превращается в прокачку: на карточках
-## уже имеющегося оружия кнопка «Улучшить» (тип оружия получает +1 уровень,
-## характеристики растут по кривым WeaponData.damage_at/range_at/interval_at),
-## а на карточках чужого оружия кнопка покупки неактивна — сначала освободи
-## слот продажей. Уровень оружия показан во всех карточках, в списке
-## купленного и в HUD. Кнопка "Заменить" за REROLL_COST XP полностью
-## перекатывает весь ряд карточек (в т.ч. уже опустевшие купленные слоты).
-## Список купленного оружия — с продажей за половину цены (округление вниз).
+## MAX_WEAPONS единиц оружия суммарно). У каждой КАРТОЧКИ свой уровень:
+## выпадение повышенных уровней открывается с ростом уровня игрока (пороги —
+## Баланс → Магазин, см. _max_card_level), цена карточки = base_cost × её
+## уровень. Пока есть свободный слот — покупка даёт единицу уровня карточки
+## (повторная копия типа возможна, уровни копий независимы). Когда слоты
+## ЗАПОЛНЕНЫ, карточка сливается только с единицей того же типа ТОГО же
+## уровня (ур. N + ур. N = ур. N+1) — кнопка «Улучшить», карточка исчезает из
+## предложения, как при покупке; если подходящей единицы нет — кнопка покупки
+## неактивна (сначала освободи слот продажей). Уровень виден во всех карточках,
+## в списке купленного и в HUD. Кнопка "Заменить" за REROLL_COST XP полностью
+## перекатывает весь ряд карточек (в т.ч. уже опустевшие слоты). Список
+## купленного оружия — с продажей за половину БАЗОВОЙ цены (округление вниз).
 ## Открывается level.gd по сигналу player.level_up (забег непрерывный,
 ## магазин ставит игру на паузу), закрывается по кнопке "Дальше" (сигнал
 ## continued), после чего level.gd открывает следующий неотработанный
@@ -67,7 +69,21 @@ func _roll_cards() -> void:
 		_build_card(pool[i])
 
 
+## Максимальный уровень карточек при текущем уровне игрока: пороги
+## открываются по одному (Баланс → Магазин), т.е. на уровне игрока между
+## порогами N и N+1 карточки могут быть уровней 1..N. Выпавший уровень
+## конкретной карточки — случайный из доступных (см. _build_card).
+func _max_card_level() -> int:
+	var player_level: int = _player.level
+	var max_level := 1
+	for level in range(2, _player.MAX_WEAPON_LEVEL + 1):
+		if player_level >= Balance.get_value("shop:card_lvl%d_at" % level):
+			max_level = level
+	return max_level
+
+
 func _build_card(weapon: WeaponData) -> void:
+	var card_level := randi_range(1, _max_card_level())
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(180, 230)
 
@@ -110,6 +126,7 @@ func _build_card(weapon: WeaponData) -> void:
 	buy_button.pressed.connect(_on_card_pressed.bind(index))
 	_cards.append({
 		"weapon": weapon,
+		"level": card_level,
 		"button": buy_button,
 		"panel": panel,
 		"bought": false,
@@ -120,22 +137,32 @@ func _build_card(weapon: WeaponData) -> void:
 	})
 
 
-## Тексты карточки по текущему состоянию: уровень оружия (у купленного —
-## уровень первой копии в арсенале, т.к. улучшение сольётся именно с ней;
-## у чужого — 1), эффективные урон/дальность на этом уровне и цена (покупка
-## или улучшение — смотря какой режим сейчас у кнопки).
+## Цена карточки её уровня: покупка единицы этого уровня или слияние с такой
+## же единицей в арсенале стоят base_cost × уровень карточки.
+func _card_price(entry: Dictionary) -> int:
+	var weapon: WeaponData = entry["weapon"]
+	return weapon.cost * int(entry["level"])
+
+
+## Тексты карточки: её собственный уровень (карточки выпадают с уровнем,
+## зависящим от уровня игрока — см. _max_card_level), эффективные урон/
+## дальность оружия на этом уровне и цена. Кнопка и её состояние — в _refresh.
 func _update_card(entry: Dictionary) -> void:
 	var weapon: WeaponData = entry["weapon"]
-	var owned_index: int = _player.first_index_of_weapon(weapon)
-	var owned: bool = owned_index >= 0
-	var level: int = _player.get_weapon_level_at(owned_index) if owned else 1
+	var level: int = entry["level"]
 	entry["name_label"].text = "%s · ур. %d" % [weapon.weapon_name, level]
 	entry["damage_label"].text = "Урон: %d" % roundi(weapon.damage_at(level))
 	entry["range_label"].text = "Дальность: %d" % roundi(weapon.range_at(level))
-	if _slots_full() and owned:
-		entry["cost_label"].text = "Улучшение: %d XP" % _player.upgrade_cost_at(owned_index)
+	if _slots_full() and _merge_target_index(entry) >= 0:
+		entry["cost_label"].text = "Улучшение: %d XP" % _card_price(entry)
 	else:
-		entry["cost_label"].text = "%d XP" % weapon.cost
+		entry["cost_label"].text = "%d XP" % _card_price(entry)
+
+
+## Индекс единицы в арсенале, с которой эта карточка может слиться: тот же
+## тип ТОГО же уровня (ур. N + ур. N = ур. N+1). -1, если такой нет.
+func _merge_target_index(entry: Dictionary) -> int:
+	return _player.first_index_of_weapon_with_level(entry["weapon"], int(entry["level"]))
 
 
 func _type_name(type: WeaponData.WeaponType) -> String:
@@ -146,30 +173,30 @@ func _slots_full() -> bool:
 	return _player.unlocked_weapons.size() >= MAX_WEAPONS
 
 
-## Кнопка карточки: пока есть свободные слоты — покупка (в т.ч. повторная
-## копия уже имеющегося оружия); когда слоты заполнены — «Улучшить» для
-## своего оружия: карточка "сливается" с первой копией этого типа в арсенале
-## (ей +1 уровень) и исчезает из предложения, как при покупке. Чужое оружие
-## при полных слотах купить нельзя — кнопка неактивна.
+## Кнопка карточки: пока есть свободные слоты — покупка единицы УРОВНЯ
+## КАРТОЧКИ (в т.ч. повторная копия уже имеющегося типа); когда слоты
+## заполнены — карточка сливается только с единицей того же типа ТОГО же
+## уровня (ур. N + ур. N = ур. N+1): «Улучшить» за цену карточки, карточка
+## исчезает из предложения, как при покупке. Если подходящей единицы в
+## арсенале нет (или карточка максимального уровня — сливать некуда), кнопка
+## неактивна: сначала освободи слот продажей или прокачай нужную ступень.
 func _on_card_pressed(index: int) -> void:
 	var entry := _cards[index]
 	if entry["bought"]:
 		return
 	var weapon: WeaponData = entry["weapon"]
+	var price := _card_price(entry)
+	if _player.current_xp < price:
+		return
 	if _slots_full():
-		var owned_index: int = _player.first_index_of_weapon(weapon)
-		if owned_index < 0 or not _player.can_upgrade_at(owned_index):
+		var merge_index := _merge_target_index(entry)
+		if merge_index < 0 or int(entry["level"]) >= _player.MAX_WEAPON_LEVEL:
 			return
-		_player.spend_xp(_player.upgrade_cost_at(owned_index))
-		_player.upgrade_weapon_at(owned_index)
-		entry["bought"] = true
-		_clear_card(entry["panel"])
-		_refresh()
-		return
-	if not _can_afford(weapon):
-		return
-	_player.spend_xp(weapon.cost)
-	_player.add_weapon(weapon)
+		_player.spend_xp(price)
+		_player.upgrade_weapon_at(merge_index)
+	else:
+		_player.spend_xp(price)
+		_player.add_weapon(weapon, int(entry["level"]))
 	entry["bought"] = true
 	_clear_card(entry["panel"])
 	_refresh()
@@ -187,10 +214,6 @@ func _clear_card(panel: PanelContainer) -> void:
 	empty_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	empty_label.modulate = Color(1, 1, 1, 0.4)
 	panel.add_child(empty_label)
-
-
-func _can_afford(weapon: WeaponData) -> bool:
-	return _player.unlocked_weapons.size() < MAX_WEAPONS and _player.current_xp >= weapon.cost
 
 
 ## Реролл — полностью новый набор из CARD_COUNT карточек за REROLL_COST XP,
@@ -264,23 +287,26 @@ func _refresh() -> void:
 	for entry in _cards:
 		if entry["bought"]:
 			continue
-		var weapon: WeaponData = entry["weapon"]
 		var button: Button = entry["button"]
-		var owned: bool = _player.unlocked_weapons.has(weapon)
+		var price := _card_price(entry)
 		_update_card(entry)
 		if slots_full:
-			# Слоты заполнены: своё оружие можно улучшать, чужое — нет.
-			if owned:
-				var owned_index: int = _player.first_index_of_weapon(weapon)
-				var at_max: bool = _player.get_weapon_level_at(owned_index) >= _player.MAX_WEAPON_LEVEL
-				button.text = "Макс. уровень" if at_max else "Улучшить"
-				button.disabled = not _player.can_upgrade_at(owned_index)
+			var merge_index := _merge_target_index(entry)
+			if merge_index >= 0 and int(entry["level"]) < _player.MAX_WEAPON_LEVEL:
+				button.text = "Улучшить"
+				button.disabled = _player.current_xp < price
+			elif merge_index >= 0:
+				# Карточка максимального уровня: сливать некуда (N+1 > потолка).
+				button.text = "Макс. уровень"
+				button.disabled = true
 			else:
+				# Чужое оружие или нет единицы нужного уровня — только продажа
+				# освободит слот; покупка/слияние недоступны.
 				button.text = "Купить"
 				button.disabled = true
 		else:
 			button.text = "Купить"
-			button.disabled = not _can_afford(weapon)
+			button.disabled = _player.current_xp < price
 
 
 func _on_continue_pressed() -> void:

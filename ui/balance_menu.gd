@@ -30,6 +30,7 @@ const SECTION_KEY_PREFIX := {
 	"weapons": "weapon",
 	"items": "items",
 	"player": "player",
+	"shop": "shop",
 }
 
 const LABEL_WIDTH := 250.0
@@ -77,12 +78,12 @@ func _render() -> void:
 		1:
 			var section: String = _path[0]
 			title_label.text = "БАЛАНС → " + Balance.SECTION_TITLES[section].to_upper()
-			if section == "player":
-				# У игрока свои статы сразу списком, скин батискафа и
-				# подраздел «Фонарь» (радиус/яркость света).
-				_add_stat_rows("player:")
-				_add_skin_row()
-				_add_nav_button("Фонарь", ["player", "flashlight"])
+			if _subsections(section).is_empty():
+				# Разделы без подразделов (Игрок, Магазин) — ползунки сразу списком.
+				_add_stat_rows(SECTION_KEY_PREFIX[section] + ":")
+				if section == "player":
+					_add_skin_row()
+					_add_nav_button("Фонарь", ["player", "flashlight"])
 			else:
 				for subsection in _subsections(section):
 					_add_nav_button(subsection["title"], [section, subsection["id"]])

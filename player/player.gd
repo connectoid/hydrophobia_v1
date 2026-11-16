@@ -40,6 +40,19 @@ const LAYER_ENEMY := 4
 @export var max_oxygen: float = 100.0
 @export var oxygen_drain_rate: float = 4.0
 
+## Кольцо атаки вокруг игрока: враги атакуют его границу, а не точку центра
+## (иначе вблизи центра вектор курса вырождается и рыбы дёргаются/вращаются
+## на месте). Цикл атаки врага: сближение до кольца → тычок → отскок →
+## случайная пауза с круговым дрейфом вдоль кольца → снова сближение
+## (см. enemy.gd::AttackPhase). Настраивается в Баланс → Игрок.
+@export var attack_ring_radius: float = 90.0
+## Дальность отскока врага после атаки (px ОТ границы кольца) и разброс
+## паузы между атаками (сек) — читаются циклом атаки врагов, как и радиус
+## кольца; все три ползунка в Баланс → Игрок.
+@export var attack_retreat_distance: float = 60.0
+@export var attack_wait_min: float = 0.3
+@export var attack_wait_max: float = 0.9
+
 ## Прогрессия уровней игрока: следующий уровень требует в level_xp_growth раз
 ## больше опыта, чем предыдущий (100 → 150 → 225 → ...). Прогресс
 ## (_level_xp_progress) копится с ЛЮБОГО полученного опыта и не уменьшается от
@@ -486,16 +499,17 @@ func spend_xp(amount: int) -> void:
 	experience_changed.emit(current_xp)
 
 
-## Добавляет ещё одну единицу оружия — стартовое или купленное в магазине.
-## Повторная покупка того же WeaponData даёт независимую копию (свой кулдаун).
-func add_weapon(weapon: WeaponData) -> void:
+## Добавляет ещё одну единицу оружия — стартовую, купленную в магазине
+## (level = уровень выпавшей карточки) или улучшенную. Повторная покупка того
+## же WeaponData даёт независимую копию (свой кулдаун и свой уровень).
+func add_weapon(weapon: WeaponData, level: int = 1) -> void:
 	unlocked_weapons.append(weapon)
 	_weapon_cooldowns.append(0.0)
 	_burst_remaining.append(0)
 	_burst_timers.append(0.0)
-	_weapon_levels.append(1)
+	_weapon_levels.append(level)
 	weapon_unlocked.emit(weapon)
-	print("Открыто оружие: %s" % weapon.weapon_name)
+	print("Открыто оружие: %s (ур. %d)" % [weapon.weapon_name, level])
 
 
 ## Уровень единицы арсенала по индексу (1 = куплена/стартовая, ещё не улучшена).
@@ -505,25 +519,20 @@ func get_weapon_level_at(index: int) -> int:
 	return _weapon_levels[index]
 
 
-## Индекс первой копии данного типа оружия в арсенале (-1, если её нет) —
-## магазин улучшает именно её (см. ui/weapon_shop.gd).
-func first_index_of_weapon(weapon: WeaponData) -> int:
-	return unlocked_weapons.find(weapon)
+## Индекс первой копии данного типа оружия указанного уровня (-1, если такой
+## нет) — магазин сливает карточку уровня N только с единицей уровня N
+## (см. ui/weapon_shop.gd::_on_card_pressed).
+func first_index_of_weapon_with_level(weapon: WeaponData, level: int) -> int:
+	for i in unlocked_weapons.size():
+		if unlocked_weapons[i] == weapon and _weapon_levels[i] == level:
+			return i
+	return -1
 
 
-## Цена улучшения до следующего уровня: базовая цена оружия × текущий уровень
-## единицы (1→2 стоит cost, 2→3 — 2×cost и т.д.).
-func upgrade_cost_at(index: int) -> int:
-	return unlocked_weapons[index].cost * get_weapon_level_at(index)
-
-
-func can_upgrade_at(index: int) -> bool:
-	return get_weapon_level_at(index) < MAX_WEAPON_LEVEL and current_xp >= upgrade_cost_at(index)
-
-
-## Прокачка ОДНОЙ единицы арсенала (карточка магазина, "слившаяся" с ней,
-## исчезает из предложения — это делает магазин). XP тратит вызывающая
-## сторона, здесь только рост уровня и сигнал для HUD/индикатора.
+## Прокачка ОДНОЙ единицы арсенала (карточка магазина того же уровня,
+## "слившаяся" с ней, исчезает из предложения — это делает магазин). XP
+## тратит вызывающая сторона, здесь только рост уровня и сигнал для
+## HUD/индикатора.
 func upgrade_weapon_at(index: int) -> void:
 	var new_level := get_weapon_level_at(index) + 1
 	_weapon_levels[index] = new_level
@@ -660,6 +669,10 @@ func _apply_balance_stats() -> void:
 	base_speed = Balance.get_value("player:speed")
 	max_health = Balance.get_value("player:health")
 	current_health = minf(current_health, max_health)
+	attack_ring_radius = Balance.get_value("player:attack_ring")
+	attack_retreat_distance = Balance.get_value("player:retreat_distance")
+	attack_wait_min = Balance.get_value("player:attack_wait_min")
+	attack_wait_max = Balance.get_value("player:attack_wait_max")
 	health_changed.emit(current_health, max_health)
 
 

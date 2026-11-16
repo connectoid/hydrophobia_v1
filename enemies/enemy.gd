@@ -87,6 +87,33 @@ var _lunge_state: LungeState = LungeState.IDLE
 var _lunge_timer: float = 0.0
 var _lunge_direction: Vector2 = Vector2.ZERO
 var _lunge_has_hit: bool = false
+var _lunge_just_finished: bool = false
+
+## Цикл атаки вокруг кольца игрока (player.attack_ring_radius): враги НЕ
+## толпятся в точке центра игрока (там вектор курса вырождается и рыба
+## дёргается/вращается на месте), а атакуют границу кольца: APPROACH —
+## сближение до кольца, BITE — короткий тычок в игрока (контактный урон
+## наносится существующим _check_contact_damage), RETREAT — отскок назад,
+## WAIT — пауза СЛУЧАЙНОЙ длительности с плавным тангенциальным дрейфом вдоль
+## кольца (кругование без нулевых векторов), затем снова APPROACH.
+## У прыгучих типов (lunge_enabled) роль BITE играет сам рывок: после его
+## окончания враг сразу отскакивает (RETREAT).
+enum AttackPhase { APPROACH, BITE, RETREAT, WAIT }
+var _attack_phase: AttackPhase = AttackPhase.APPROACH
+var _phase_timer: float = 0.0
+## Знак тангенциального дрейфа на паузе — у каждого свой, чтобы соседи не
+## кружились синхронно.
+var _wait_orbit_sign: float = 1.0
+
+@export var bite_duration: float = 0.25 # сек, длительность тычка (обрывается раньше при контакте)
+@export var bite_speed_mult: float = 1.8 # множитель скорости на тычке
+@export var retreat_speed_mult: float = 0.9 # множитель скорости на отскоке
+## Дальность отскока (кольцо + attack_retreat_distance) и случайная пауза
+## между атаками (attack_wait_min..max) — ОБЩИЕ настройки игрока
+## (player.gd, ползунки Баланс → Игрок), читаются с цели каждый цикл
+## (_get_player_setting), а не per-enemy экспорты: пользователю нужен единый
+## регулятор «как близко и как часто кусают».
+var _retreat_target_dist: float = 0.0
 
 ## Стайная органика (aggressive-враги): без неё все особи одного типа движутся
 ## абсолютно синхронно (одинаковые speed/курс — стая выглядит как один
@@ -241,6 +268,7 @@ func _ready() -> void:
 		_surge_phase = randf() * TAU
 		_surge_freq = randf_range(0.15, 0.35)
 		_surge_amp = school_surge_amplitude * randf_range(0.6, 1.0)
+		_wait_orbit_sign = 1.0 if randf() < 0.5 else -1.0
 
 	var trail := sprite.get_node_or_null("BubbleTrail") as Node2D
 	if trail:
@@ -268,12 +296,10 @@ func _physics_process(delta: float) -> void:
 
 		_school_time += delta
 		var to_target := _target.global_position - global_position
-		if lunge_enabled:
-			_process_lunge(delta, to_target)
-		elif pulse_movement:
+		if pulse_movement:
 			velocity = to_target.normalized() * speed * _process_pulse(delta)
 		else:
-			velocity = _school_velocity(to_target)
+			_process_attack_cycle(delta, to_target)
 		if face_target and velocity != Vector2.ZERO:
 			_face_direction(velocity)
 
@@ -297,31 +323,45 @@ func _physics_process(delta: float) -> void:
 		_check_contact_damage()
 
 
-## Состояния рывка (см. doc-комментарий у lunge_enabled): IDLE — обычное
-## медленное сближение, как только дистанция до цели упадёт ниже lunge_range —
-## переход в LUNGING (бросок по прямой на lunge_speed на lunge_duration
-## секунд); после — COOLDOWN (снова медленное сближение lunge_cooldown секунд,
-## прежде чем рывок опять разрешён).
+## Состояния рывка (см. doc-комментарий у lunge_enabled): IDLE — сближение до
+## кольца атаки, LUNGING — бросок на lunge_speed до контакта (обрывается на
+## нём, не пролетает сквозь игрока), COOLDOWN — восстановление. Атака прыгучего
+## типа — сам рывок: триггер не ближе кольца (maxf(lunge_range, ring)), иначе
+## при кольце больше радиуса срабатывания рыба кружила бы и не атаковала.
+## COOLDOWN/ожидание в IDLE держат врага ДРЕЙФОМ ПО КОЛЬЦУ, а не заходом в
+## точку центра — прежний заход в точку давал и "прощуивание" сквозь игрока,
+## и закручивание в его центре (dist ~1 px).
 func _process_lunge(delta: float, to_target: Vector2) -> void:
+	var dist := to_target.length()
 	match _lunge_state:
 		LungeState.LUNGING:
 			_lunge_timer -= delta
 			velocity = _lunge_direction * lunge_speed
-			if _lunge_timer <= 0.0:
+			# Рывок обрывается на реальном контакте (урон нанесёт
+			# _check_contact_damage) — иначе фиксированная длительность
+			# протаскивает рыбу сквозь игрока по инерции.
+			var lunge_contact_range := _get_collision_radius(self) + _get_collision_radius(_target)
+			if _lunge_timer <= 0.0 or dist <= lunge_contact_range:
 				_lunge_state = LungeState.COOLDOWN
 				_lunge_timer = lunge_cooldown
+				_lunge_just_finished = true # цикл атаки перейдёт к отскоку
 		LungeState.COOLDOWN:
 			_lunge_timer -= delta
-			velocity = _school_velocity(to_target)
+			# Пока бросок восстанавливается — кругование вдоль кольца атаки.
+			velocity = _wait_velocity(to_target, dist, _get_attack_ring())
 			if _lunge_timer <= 0.0:
 				_lunge_state = LungeState.IDLE
 		LungeState.IDLE:
-			velocity = _school_velocity(to_target)
-			if to_target.length() <= lunge_range:
+			var ring := _get_attack_ring()
+			if dist <= maxf(lunge_range, ring):
 				_lunge_state = LungeState.LUNGING
 				_lunge_timer = lunge_duration
-				_lunge_direction = to_target.normalized()
+				_lunge_direction = _safe_direction(to_target)
 				_lunge_has_hit = false
+			elif dist <= ring:
+				velocity = _wait_velocity(to_target, dist, ring)
+			else:
+				velocity = _school_velocity(to_target)
 
 
 ## Стайная органика движения (см. экспорты school_*): курс на цель с плавным
@@ -335,6 +375,97 @@ func _school_velocity(to_target: Vector2) -> Vector2:
 	direction = direction.rotated(sin(_school_time * _wobble_freq * TAU + _wobble_phase) * _wobble_amp)
 	var surge := 1.0 + maxf(0.0, sin(_school_time * _surge_freq * TAU + _surge_phase)) * _surge_amp
 	return direction * speed * _speed_variation * surge
+
+
+## Кольцо атаки игрока: враги атакуют его границу, а не точку центра (см.
+## doc у AttackPhase). Читается с игрока каждый кадр — ползунок в Балансе
+## действует на лету; фолбэк на случай цели без этого свойства.
+func _get_player_setting(setting: String, fallback: float) -> float:
+	var value = _target.get(setting)
+	return float(value) if value != null else fallback
+
+
+func _get_attack_ring() -> float:
+	return _get_player_setting("attack_ring_radius", 90.0)
+
+
+func _process_attack_cycle(delta: float, to_target: Vector2) -> void:
+	var dist := to_target.length()
+	var ring := _get_attack_ring()
+	match _attack_phase:
+		AttackPhase.APPROACH:
+			if lunge_enabled:
+				# Рывок и есть атака; как только он отстрелял — сразу отскок.
+				_process_lunge(delta, to_target)
+				if _lunge_just_finished:
+					_lunge_just_finished = false
+					_enter_retreat()
+			else:
+				velocity = _school_velocity(to_target)
+				if dist <= ring:
+					_attack_phase = AttackPhase.BITE
+					_phase_timer = bite_duration
+		AttackPhase.BITE:
+			_phase_timer -= delta
+			velocity = _safe_direction(to_target) * speed * _speed_variation * bite_speed_mult
+			# Тычок обрывается при реальном контакте (урон нанесёт
+			# _check_contact_damage) — не пролетать сквозь игрока.
+			var contact_range := _get_collision_radius(self) + _get_collision_radius(_target)
+			if _phase_timer <= 0.0 or dist <= contact_range:
+				_enter_retreat()
+		AttackPhase.RETREAT:
+			# Отскок ПО ДИСТАНЦИИ: до цели (кольцо + настройка игрока
+			# «Дальность отскока после атаки»), а не по таймеру — так ползунок
+			# честно означает пиксели. _phase_timer здесь только страховка:
+			# если игрок упорно ныряет на врага и дистанция не растёт,
+			# отскок всё равно когда-то кончится.
+			_phase_timer -= delta
+			velocity = -_safe_direction(to_target) * speed * _speed_variation * retreat_speed_mult
+			if dist >= _retreat_target_dist or _phase_timer <= 0.0:
+				_attack_phase = AttackPhase.WAIT
+				_phase_timer = randf_range(
+					_get_player_setting("attack_wait_min", 0.3),
+					_get_player_setting("attack_wait_max", 0.9)
+				)
+		AttackPhase.WAIT:
+			_phase_timer -= delta
+			velocity = _wait_velocity(to_target, dist, ring)
+			if _phase_timer <= 0.0:
+				_attack_phase = AttackPhase.APPROACH
+
+
+func _enter_retreat() -> void:
+	_attack_phase = AttackPhase.RETREAT
+	_retreat_target_dist = _get_attack_ring() + _get_player_setting("attack_retreat_distance", 60.0)
+	_phase_timer = 1.5
+
+
+## Направление на цель с защитой от вырожденного нулевого вектора (если игрок
+## и враг совпали точка в точку — уходим в случайную сторону, а не дёргаемся).
+func _safe_direction(to_target: Vector2) -> Vector2:
+	if to_target.length() < 1.0:
+		return Vector2.RIGHT.rotated(randf() * TAU)
+	return to_target.normalized()
+
+
+## Пауза между атаками: плавный тангенциальный дрейф вдоль кольца атаки с
+## радиальной коррекцией к его радиусу — враг кружит вокруг игрока, готовясь
+## к следующему тычку, без нулевых векторов и вращения на месте. Скорость
+## пониженная, знак кругования у каждой особи свой.
+## ВАЖНО: радиальная поправка нормирована к радиусу кольца и ограничена ±1 —
+## неограниченная (ring - dist) на больших дистанциях забивала тангенциальную
+## составляющую и WAIT превращался в прямое падение сквозь центр игрока
+## ("закручивание в точке" при повторных заходах).
+func _wait_velocity(to_target: Vector2, dist: float, ring: float) -> Vector2:
+	if dist < 1.0:
+		return Vector2.RIGHT.rotated(randf() * TAU) * speed * 0.6
+	var radial_dir := -to_target / dist # от игрока наружу
+	var tangent := radial_dir.rotated(_wait_orbit_sign * PI * 0.5)
+	# Дальше кольца — подтягиваем внутрь, ближе — выталкиваем наружу, но не
+	# сильнее тангенциального дрейфа: траектория остаётся спиралью к кольцу.
+	var radial_pull := clampf((ring - dist) / maxf(ring, 1.0), -1.0, 1.0)
+	var desired := tangent + radial_dir * radial_pull
+	return desired.normalized() * speed * _speed_variation * 0.6
 
 
 ## Множитель скорости для pulse_movement (см. doc-комментарий у экспортов) —
